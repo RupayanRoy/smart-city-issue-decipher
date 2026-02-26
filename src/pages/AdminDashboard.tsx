@@ -12,7 +12,7 @@ import { escalationService } from '@/backend/services/escalationService';
 import { DEPARTMENTS } from '@/backend/types';
 import { showSuccess } from '@/utils/toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon, ImageIcon, Activity, BarChart3, LayoutDashboard, Clock, Heart } from 'lucide-react';
+import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon, ImageIcon, Activity, BarChart3, LayoutDashboard, Clock, Heart, Flag, Check, X } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 import Footer from '@/components/Footer';
 
@@ -40,7 +40,19 @@ const AdminDashboard = () => {
     const admin = JSON.parse(localStorage.getItem('current_user') || '{}');
     issueService.updateStatus(id, status, admin.name);
     showSuccess(`Status updated to ${status}`);
-    if (status === 'Resolved') setStatusFilter('Resolved');
+    refreshData();
+  };
+
+  const handleConfirmReport = (id: string) => {
+    const admin = JSON.parse(localStorage.getItem('current_user') || '{}');
+    issueService.confirmReport(id, admin.name);
+    showSuccess("Report confirmed. Issue flagged and user penalized.");
+    refreshData();
+  };
+
+  const handleDismissReports = (id: string) => {
+    issueService.dismissReports(id);
+    showSuccess("Reports dismissed.");
     refreshData();
   };
 
@@ -61,6 +73,8 @@ const AdminDashboard = () => {
     const matchesStatus = statusFilter === 'All' || issue.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const reportedIssues = issues.filter(issue => issue.reports && issue.reports.length > 0 && issue.status !== 'Flagged');
 
   if (!stats) return null;
   const pieData = Object.entries(stats.byCategory).map(([name, value]) => ({ name, value }));
@@ -115,6 +129,9 @@ const AdminDashboard = () => {
             <TabsTrigger value="management" className="rounded-xl px-8 py-3 font-black text-sm data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all flex items-center gap-2">
               <LayoutDashboard className="w-4 h-4" /> Issue Management
             </TabsTrigger>
+            <TabsTrigger value="moderation" className="rounded-xl px-8 py-3 font-black text-sm data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all flex items-center gap-2">
+              <Flag className="w-4 h-4" /> Moderation {reportedIssues.length > 0 && <Badge className="ml-2 bg-red-500 text-white">{reportedIssues.length}</Badge>}
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="rounded-xl px-8 py-3 font-black text-sm data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all flex items-center gap-2">
               <BarChart3 className="w-4 h-4" /> Impact Analytics
             </TabsTrigger>
@@ -134,6 +151,7 @@ const AdminDashboard = () => {
                 <option value="Pending">Pending Action</option>
                 <option value="In Progress">In Action</option>
                 <option value="Resolved">Resolved</option>
+                <option value="Flagged">Invalid</option>
               </select>
             </div>
 
@@ -150,9 +168,6 @@ const AdminDashboard = () => {
                         {issue.imageUrl && (
                           <div className="lg:w-72 h-72 lg:h-auto shrink-0 bg-slate-100 relative">
                             <img src={issue.imageUrl} alt={issue.title} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Button variant="secondary" size="sm" className="rounded-full font-bold"><ImageIcon className="mr-2 w-4 h-4" /> View Full</Button>
-                            </div>
                           </div>
                         )}
                         <div className="p-10 flex-1 space-y-6">
@@ -176,7 +191,7 @@ const AdminDashboard = () => {
                             <div className="flex flex-col gap-4 min-w-[240px] bg-slate-50 p-6 rounded-3xl border border-slate-100">
                               <div className="flex items-center justify-between mb-2">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Current Status</p>
-                                <Badge className={`rounded-lg font-black text-[10px] uppercase tracking-widest ${issue.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                <Badge className={`rounded-lg font-black text-[10px] uppercase tracking-widest ${issue.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700' : issue.status === 'Flagged' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                                   {issue.status}
                                 </Badge>
                               </div>
@@ -202,6 +217,47 @@ const AdminDashboard = () => {
                               </div>
                             </div>
                           </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="moderation" className="space-y-6">
+            <div className="grid gap-6">
+              {reportedIssues.length === 0 ? (
+                <div className="text-center py-32 bg-white rounded-[2.5rem] border-4 border-dashed border-slate-200">
+                  <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+                  <p className="text-slate-400 font-black uppercase tracking-widest">No reported issues to review</p>
+                </div>
+              ) : (
+                reportedIssues.map(issue => (
+                  <Card key={issue.id} className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white border-l-8 border-red-500">
+                    <CardContent className="p-10">
+                      <div className="flex flex-col md:flex-row justify-between gap-8">
+                        <div className="space-y-4 flex-1">
+                          <div className="flex items-center gap-3">
+                            <Badge className="bg-red-100 text-red-700 font-black text-[10px] uppercase tracking-widest">
+                              {issue.reports.length} Reports
+                            </Badge>
+                            <h3 className="font-black text-2xl text-slate-900">{issue.title}</h3>
+                          </div>
+                          <p className="text-slate-500 font-medium text-lg">{issue.description}</p>
+                          <div className="flex gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            <span>Posted by: {mockDb.users.find(u => u.id === issue.citizenId)?.name}</span>
+                            <span>ID: {issue.id}</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-3 min-w-[200px]">
+                          <Button className="w-full rounded-xl h-12 font-black bg-red-600 hover:bg-red-700" onClick={() => handleConfirmReport(issue.id)}>
+                            <Check className="mr-2 w-4 h-4" /> Confirm & Penalize
+                          </Button>
+                          <Button variant="outline" className="w-full rounded-xl h-12 font-black border-2" onClick={() => handleDismissReports(issue.id)}>
+                            <X className="mr-2 w-4 h-4" /> Dismiss Reports
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -241,24 +297,6 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             </div>
-            <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-              <CardHeader className="p-8 border-b border-slate-50"><CardTitle className="text-xl font-black">High-Impact Areas</CardTitle></CardHeader>
-              <CardContent className="p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {stats.topAreas.map((area: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between p-6 bg-slate-50 rounded-[1.5rem] border border-slate-100 group hover:bg-white hover:shadow-lg transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className="bg-white p-3 rounded-xl shadow-sm group-hover:bg-emerald-500 group-hover:text-white transition-all">
-                          <MapPin className="w-5 h-5" />
-                        </div>
-                        <span className="font-bold text-slate-700 truncate max-w-[150px]">{area.address}</span>
-                      </div>
-                      <Badge className="bg-slate-900 text-white rounded-lg px-3 py-1 font-black">{area.count} Reports</Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="map" className="space-y-4">
@@ -271,7 +309,7 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent className="p-8">
                 <div className="rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl">
-                  <IssueMapOverview issues={issues} />
+                  <IssueMapOverview issues={issues.filter(i => i.status !== 'Flagged')} />
                 </div>
               </CardContent>
             </Card>

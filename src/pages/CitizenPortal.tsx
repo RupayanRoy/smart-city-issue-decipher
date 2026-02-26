@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { showSuccess, showError } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping, ThumbsUp, MessageSquare, Send } from 'lucide-react';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping, ThumbsUp, MessageSquare, Send, Flag, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import IssueMapOverview from '@/components/IssueMapOverview';
@@ -58,7 +58,6 @@ const CitizenPortal = () => {
 
   const refreshData = (userId: string) => {
     setMyIssues(mockDb.issues.filter(i => i.citizenId === userId));
-    // Sort nearby issues by upvotes and then date
     const nearby = issueService.getIssuesByRadius(12.8406, 80.1534, 5);
     setNearbyIssues(nearby.sort((a, b) => (b.upvotes?.length || 0) - (a.upvotes?.length || 0)));
     
@@ -71,6 +70,12 @@ const CitizenPortal = () => {
     refreshData(user.id);
   };
 
+  const handleReport = (issueId: string) => {
+    issueService.toggleReport(issueId, user.id);
+    refreshData(user.id);
+    showSuccess("Report submitted for admin review.");
+  };
+
   const handleAddComment = (issueId: string) => {
     const text = commentText[issueId];
     if (!text?.trim()) return;
@@ -79,6 +84,12 @@ const CitizenPortal = () => {
     setCommentText(prev => ({ ...prev, [issueId]: '' }));
     refreshData(user.id);
     showSuccess("Comment added!");
+  };
+
+  const handleDeleteComment = (issueId: string, commentId: string) => {
+    issueService.deleteComment(issueId, commentId);
+    refreshData(user.id);
+    showSuccess("Comment deleted.");
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,6 +154,7 @@ const CitizenPortal = () => {
       case 'Pending': return <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">Reviewing</Badge>;
       case 'In Progress': return <Badge className="bg-sky-100 text-sky-700 border-sky-200 hover:bg-sky-100">In Action</Badge>;
       case 'Resolved': return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">Resolved</Badge>;
+      case 'Flagged': return <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100">Invalid</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
@@ -290,7 +302,7 @@ const CitizenPortal = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                  {nearbyIssues.filter(i => i.title.toLowerCase().includes(searchQuery.toLowerCase())).map(issue => (
+                  {nearbyIssues.filter(i => i.title.toLowerCase().includes(searchQuery.toLowerCase()) && i.status !== 'Flagged').map(issue => (
                     <Card key={issue.id} className="border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-[2rem] overflow-hidden bg-white">
                       <div className="flex flex-col md:flex-row">
                         {issue.imageUrl && (
@@ -311,7 +323,7 @@ const CitizenPortal = () => {
                           </div>
                           <p className="text-slate-500 text-sm font-medium mb-6 line-clamp-2">{issue.description}</p>
                           
-                          <div className="flex items-center gap-6 mb-6">
+                          <div className="flex items-center gap-4 mb-6">
                             <Button 
                               variant={issue.upvotes?.includes(user?.id) ? "default" : "outline"} 
                               size="sm" 
@@ -320,15 +332,30 @@ const CitizenPortal = () => {
                             >
                               <ThumbsUp className="w-4 h-4" /> {issue.upvotes?.length || 0} Support
                             </Button>
-                            <div className="flex items-center gap-2 text-slate-400 text-sm font-bold">
+                            <Button 
+                              variant={issue.reports?.includes(user?.id) ? "destructive" : "outline"} 
+                              size="sm" 
+                              className={`rounded-xl font-bold gap-2 ${issue.reports?.includes(user?.id) ? 'bg-red-600' : 'border-2'}`}
+                              onClick={() => handleReport(issue.id)}
+                            >
+                              <Flag className="w-4 h-4" /> Report
+                            </Button>
+                            <div className="flex items-center gap-2 text-slate-400 text-sm font-bold ml-auto">
                               <MessageSquare className="w-4 h-4" /> {issue.comments?.length || 0} Comments
                             </div>
                           </div>
 
                           <div className="space-y-4 pt-6 border-t border-slate-50">
-                            {issue.comments?.slice(-2).map((comment: any) => (
-                              <div key={comment.id} className="bg-slate-50 p-3 rounded-xl text-xs">
-                                <p className="font-black text-slate-900 mb-1">{comment.userName}</p>
+                            {issue.comments?.map((comment: any) => (
+                              <div key={comment.id} className="bg-slate-50 p-3 rounded-xl text-xs group/comment relative">
+                                <div className="flex justify-between items-start mb-1">
+                                  <p className="font-black text-slate-900">{comment.userName}</p>
+                                  {comment.userId === user?.id && (
+                                    <button onClick={() => handleDeleteComment(issue.id, comment.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
                                 <p className="text-slate-600">{comment.text}</p>
                               </div>
                             ))}
@@ -359,7 +386,7 @@ const CitizenPortal = () => {
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="rounded-2xl overflow-hidden border-2 border-white shadow-lg h-[300px]">
-                      <IssueMapOverview issues={nearbyIssues} />
+                      <IssueMapOverview issues={nearbyIssues.filter(i => i.status !== 'Flagged')} />
                     </div>
                   </CardContent>
                 </Card>
@@ -449,7 +476,7 @@ const CitizenPortal = () => {
                 <div className="space-y-10 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
                   {myIssues.flatMap(i => i.statusHistory.map((h: any) => ({ ...h, issueTitle: i.title, issueStatus: i.status }))).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((activity, idx) => (
                     <div key={idx} className="flex gap-6 relative z-10">
-                      <div className={`w-6 h-6 rounded-full border-4 border-white shadow-md shrink-0 mt-1 ${activity.status === 'Resolved' ? 'bg-emerald-500' : activity.status === 'In Progress' ? 'bg-sky-500' : 'bg-amber-500'}`} />
+                      <div className={`w-6 h-6 rounded-full border-4 border-white shadow-md shrink-0 mt-1 ${activity.status === 'Resolved' ? 'bg-emerald-500' : activity.status === 'In Progress' ? 'bg-sky-500' : activity.status === 'Flagged' ? 'bg-red-500' : 'bg-amber-500'}`} />
                       <div className="space-y-1">
                         <p className="text-sm font-bold text-slate-900">
                           Report "<span className="text-emerald-600">{activity.issueTitle}</span>" moved to <span className="uppercase tracking-widest text-[10px] px-2 py-0.5 bg-slate-100 rounded-md ml-1">{activity.status}</span>

@@ -10,7 +10,7 @@ export interface User {
 }
 
 export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Other';
-export type IssueStatus = 'Pending' | 'In Progress' | 'Resolved';
+export type IssueStatus = 'Pending' | 'In Progress' | 'Resolved' | 'Flagged';
 export type IssuePriority = 'Low' | 'Medium' | 'High';
 
 export const DEPARTMENTS = [
@@ -55,6 +55,7 @@ export interface Issue {
   assignedTo?: string;
   statusHistory: StatusHistory[];
   upvotes: string[]; // Array of User IDs
+  reports: string[]; // Array of User IDs who reported this
   comments: Comment[];
   escalated: boolean;
   createdAt: string;

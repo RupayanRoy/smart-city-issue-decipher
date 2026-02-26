@@ -22,6 +22,7 @@ export const issueService = {
         updatedBy: 'System'
       }],
       upvotes: [],
+      reports: [],
       comments: [],
       escalated: false,
       createdAt: new Date().toISOString(),
@@ -41,7 +42,6 @@ export const issueService = {
     const index = issue.upvotes.indexOf(userId);
     if (index === -1) {
       issue.upvotes.push(userId);
-      // Auto-escalate priority if upvotes exceed threshold
       if (issue.upvotes.length >= 5 && issue.priority !== 'High') {
         issue.priority = 'High';
       } else if (issue.upvotes.length >= 2 && issue.priority === 'Low') {
@@ -49,6 +49,21 @@ export const issueService = {
       }
     } else {
       issue.upvotes.splice(index, 1);
+    }
+    
+    mockDb.save();
+    return issue;
+  },
+
+  toggleReport: (issueId: string, userId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+
+    const index = issue.reports.indexOf(userId);
+    if (index === -1) {
+      issue.reports.push(userId);
+    } else {
+      issue.reports.splice(index, 1);
     }
     
     mockDb.save();
@@ -72,6 +87,15 @@ export const issueService = {
     return issue;
   },
 
+  deleteComment: (issueId: string, commentId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+
+    issue.comments = issue.comments.filter(c => c.id !== commentId);
+    mockDb.save();
+    return issue;
+  },
+
   updateStatus: (issueId: string, status: IssueStatus, adminId: string) => {
     const issue = mockDb.issues.find(i => i.id === issueId);
     if (!issue) throw new Error('Issue not found');
@@ -83,7 +107,7 @@ export const issueService = {
       issue.resolvedAt = new Date().toISOString();
       const citizen = mockDb.users.find(u => u.id === issue.citizenId);
       if (citizen) {
-        citizen.points = (citizen.points || 0) + 10; // More points for resolution
+        citizen.points = (citizen.points || 0) + 10;
       }
     }
     
@@ -95,6 +119,36 @@ export const issueService = {
 
     mockDb.save();
     return issue;
+  },
+
+  confirmReport: (issueId: string, adminId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+
+    // Penalize the creator
+    const creator = mockDb.users.find(u => u.id === issue.citizenId);
+    if (creator) {
+      creator.points = Math.max(0, (creator.points || 0) - 1);
+    }
+
+    // Mark as flagged/invalid
+    issue.status = 'Flagged';
+    issue.statusHistory.push({
+      status: 'Flagged',
+      timestamp: new Date().toISOString(),
+      updatedBy: adminId,
+      note: 'Issue confirmed as invalid/fake by admin.'
+    });
+
+    mockDb.save();
+  },
+
+  dismissReports: (issueId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+
+    issue.reports = [];
+    mockDb.save();
   },
 
   markAsNotified: (issueId: string) => {
