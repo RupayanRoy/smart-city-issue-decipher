@@ -1,11 +1,9 @@
 import { User, Issue } from './types';
 
-// In a real app, this would be MongoDB
 export const mockDb = {
   users: [] as User[],
   issues: [] as Issue[],
   
-  // Helper to persist to localStorage for demo purposes
   save: () => {
     localStorage.setItem('smart_city_db', JSON.stringify({
       users: mockDb.users,
@@ -23,10 +21,8 @@ export const mockDb = {
   }
 };
 
-// Initialize
 mockDb.load();
 
-// Seed Admin if not exists
 if (!mockDb.users.find(u => u.role === 'admin')) {
   mockDb.users.push({
     id: 'admin-1',
@@ -37,17 +33,15 @@ if (!mockDb.users.find(u => u.role === 'admin')) {
   });
 }
 
-// Seed Mock Citizens if not exists
 if (mockDb.users.length <= 1) {
   const mockCitizens = [
-    { id: 'cit-1', name: 'Arun Kumar', email: 'arun@example.com', role: 'citizen' as const, password: 'password123' },
-    { id: 'cit-2', name: 'Priya Sharma', email: 'priya@example.com', role: 'citizen' as const, password: 'password123' },
-    { id: 'cit-3', name: 'Sanjay Viswanathan', email: 'sanjay@example.com', role: 'citizen' as const, password: 'password123' }
+    { id: 'cit-1', name: 'Rupayan', email: 'rupayan@example.com', role: 'citizen' as const, password: 'password123', points: 15 },
+    { id: 'cit-2', name: 'Priya Sharma', email: 'priya@example.com', role: 'citizen' as const, password: 'password123', points: 5 },
+    { id: 'cit-3', name: 'Sanjay Viswanathan', email: 'sanjay@example.com', role: 'citizen' as const, password: 'password123', points: 8 }
   ];
   mockDb.users.push(...mockCitizens);
 }
 
-// Seed Mock Issues around VIT Chennai (12.8406, 80.1534) if empty
 if (mockDb.issues.length === 0) {
   const now = new Date();
   const mockIssues: Issue[] = [
@@ -65,6 +59,10 @@ if (mockDb.issues.length === 0) {
         { status: 'Pending', timestamp: new Date(now.getTime() - 86400000 * 2).toISOString(), updatedBy: 'System' },
         { status: 'In Progress', timestamp: new Date(now.getTime() - 86400000).toISOString(), updatedBy: 'System Admin' }
       ],
+      upvotes: ['cit-2', 'cit-3'],
+      comments: [
+        { id: 'c1', userId: 'cit-2', userName: 'Priya Sharma', text: 'I almost fell here yesterday! Please fix soon.', timestamp: new Date(now.getTime() - 86400000).toISOString() }
+      ],
       escalated: false,
       createdAt: new Date(now.getTime() - 86400000 * 2).toISOString(),
       updatedAt: new Date(now.getTime() - 86400000).toISOString()
@@ -79,43 +77,11 @@ if (mockDb.issues.length === 0) {
       priority: 'Medium',
       location: { address: 'Kelambakkam High Road, Chennai', lat: 12.8385, lng: 80.1560 },
       statusHistory: [{ status: 'Pending', timestamp: new Date(now.getTime() - 86400000).toISOString(), updatedBy: 'System' }],
+      upvotes: ['cit-1'],
+      comments: [],
       escalated: false,
       createdAt: new Date(now.getTime() - 86400000).toISOString(),
       updatedAt: new Date(now.getTime() - 86400000).toISOString()
-    },
-    {
-      id: 'iss-3',
-      citizenId: 'cit-3',
-      title: 'Garbage Overflow',
-      description: 'The community bin is overflowing and hasn\'t been cleared in a week. The smell is becoming unbearable.',
-      category: 'Garbage',
-      status: 'Pending',
-      priority: 'Medium',
-      location: { address: 'Mambakkam Main Road, Chennai', lat: 12.8450, lng: 80.1480 },
-      statusHistory: [{ status: 'Pending', timestamp: new Date(now.getTime() - 43200000).toISOString(), updatedBy: 'System' }],
-      escalated: false,
-      createdAt: new Date(now.getTime() - 43200000).toISOString(),
-      updatedAt: new Date(now.getTime() - 43200000).toISOString()
-    },
-    {
-      id: 'iss-4',
-      citizenId: 'cit-1',
-      title: 'Water Pipe Leakage',
-      description: 'Major water leakage from a burst pipe on the side of the road. Significant amount of water is being wasted.',
-      category: 'Water',
-      status: 'Resolved',
-      priority: 'High',
-      location: { address: 'Near VIT Chennai Campus', lat: 12.8425, lng: 80.1510 },
-      assignedTo: 'Water & Sanitation',
-      statusHistory: [
-        { status: 'Pending', timestamp: new Date(now.getTime() - 86400000 * 3).toISOString(), updatedBy: 'System' },
-        { status: 'In Progress', timestamp: new Date(now.getTime() - 86400000 * 2).toISOString(), updatedBy: 'System Admin' },
-        { status: 'Resolved', timestamp: new Date(now.getTime() - 86400000).toISOString(), updatedBy: 'System Admin' }
-      ],
-      escalated: false,
-      createdAt: new Date(now.getTime() - 86400000 * 3).toISOString(),
-      updatedAt: new Date(now.getTime() - 86400000).toISOString(),
-      resolvedAt: new Date(now.getTime() - 86400000).toISOString()
     }
   ];
   mockDb.issues.push(...mockIssues);

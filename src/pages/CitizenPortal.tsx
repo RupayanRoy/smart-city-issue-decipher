@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { showSuccess, showError } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping } from 'lucide-react';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping, ThumbsUp, MessageSquare, Send } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import IssueMapOverview from '@/components/IssueMapOverview';
@@ -24,6 +24,7 @@ const CitizenPortal = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [showForm, setShowForm] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [commentText, setCommentText] = useState<Record<string, string>>({});
   
   const [formData, setFormData] = useState({
     title: '',
@@ -50,16 +51,34 @@ const CitizenPortal = () => {
   const checkNotifications = (userId: string) => {
     const resolvedUnnotified = mockDb.issues.filter(i => i.citizenId === userId && i.status === 'Resolved' && !i.notified);
     resolvedUnnotified.forEach(issue => {
-      showSuccess(`Heroic Work! Your report "${issue.title}" has been resolved. You've earned 1 Bronze Point! 🥉`);
+      showSuccess(`Heroic Work! Your report "${issue.title}" has been resolved. You've earned 10 Impact Points! 🏆`);
       issueService.markAsNotified(issue.id);
     });
   };
 
   const refreshData = (userId: string) => {
     setMyIssues(mockDb.issues.filter(i => i.citizenId === userId));
-    setNearbyIssues(issueService.getIssuesByRadius(12.8406, 80.1534, 5));
+    // Sort nearby issues by upvotes and then date
+    const nearby = issueService.getIssuesByRadius(12.8406, 80.1534, 5);
+    setNearbyIssues(nearby.sort((a, b) => (b.upvotes?.length || 0) - (a.upvotes?.length || 0)));
+    
     const dbUser = mockDb.users.find(u => u.id === userId);
     if (dbUser) setUser(dbUser);
+  };
+
+  const handleUpvote = (issueId: string) => {
+    issueService.toggleUpvote(issueId, user.id);
+    refreshData(user.id);
+  };
+
+  const handleAddComment = (issueId: string) => {
+    const text = commentText[issueId];
+    if (!text?.trim()) return;
+    
+    issueService.addComment(issueId, user.id, user.name, text);
+    setCommentText(prev => ({ ...prev, [issueId]: '' }));
+    refreshData(user.id);
+    showSuccess("Comment added!");
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,7 +167,7 @@ const CitizenPortal = () => {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Impact Points</p>
-                <p className="text-sm font-black text-slate-900">{user?.points || 0} Bronze</p>
+                <p className="text-sm font-black text-slate-900">{user?.points || 0} Points</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -253,29 +272,121 @@ const CitizenPortal = () => {
           </Card>
         )}
 
-        <Tabs defaultValue="issues" className="w-full">
+        <Tabs defaultValue="nearby" className="w-full">
           <TabsList className="mb-8 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm inline-flex">
-            <TabsTrigger value="issues" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all">My Contributions</TabsTrigger>
             <TabsTrigger value="nearby" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all">City Pulse</TabsTrigger>
+            <TabsTrigger value="issues" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all">My Contributions</TabsTrigger>
             <TabsTrigger value="activity" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all">Recent Activity</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="issues" className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between gap-4 items-center">
-              <div className="relative w-full md:max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input placeholder="Search your reports..." className="pl-12 h-12 rounded-2xl border-slate-200 bg-white shadow-sm" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          <TabsContent value="nearby" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="flex flex-col md:flex-row justify-between gap-4 items-center">
+                  <div className="relative w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Input placeholder="Search community reports..." className="pl-12 h-12 rounded-2xl border-slate-200 bg-white shadow-sm" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  {nearbyIssues.filter(i => i.title.toLowerCase().includes(searchQuery.toLowerCase())).map(issue => (
+                    <Card key={issue.id} className="border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-[2rem] overflow-hidden bg-white">
+                      <div className="flex flex-col md:flex-row">
+                        {issue.imageUrl && (
+                          <div className="md:w-64 h-64 md:h-auto shrink-0">
+                            <img src={issue.imageUrl} alt={issue.title} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className="p-8 flex-1 flex flex-col">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold rounded-lg">{issue.category}</Badge>
+                                {issue.priority === 'High' && <Badge className="bg-red-100 text-red-700 border-red-200">High Priority</Badge>}
+                              </div>
+                              <h3 className="font-black text-xl text-slate-900 leading-tight">{issue.title}</h3>
+                            </div>
+                            {getStatusBadge(issue.status)}
+                          </div>
+                          <p className="text-slate-500 text-sm font-medium mb-6 line-clamp-2">{issue.description}</p>
+                          
+                          <div className="flex items-center gap-6 mb-6">
+                            <Button 
+                              variant={issue.upvotes?.includes(user?.id) ? "default" : "outline"} 
+                              size="sm" 
+                              className={`rounded-xl font-bold gap-2 ${issue.upvotes?.includes(user?.id) ? 'bg-emerald-600' : 'border-2'}`}
+                              onClick={() => handleUpvote(issue.id)}
+                            >
+                              <ThumbsUp className="w-4 h-4" /> {issue.upvotes?.length || 0} Support
+                            </Button>
+                            <div className="flex items-center gap-2 text-slate-400 text-sm font-bold">
+                              <MessageSquare className="w-4 h-4" /> {issue.comments?.length || 0} Comments
+                            </div>
+                          </div>
+
+                          <div className="space-y-4 pt-6 border-t border-slate-50">
+                            {issue.comments?.slice(-2).map((comment: any) => (
+                              <div key={comment.id} className="bg-slate-50 p-3 rounded-xl text-xs">
+                                <p className="font-black text-slate-900 mb-1">{comment.userName}</p>
+                                <p className="text-slate-600">{comment.text}</p>
+                              </div>
+                            ))}
+                            <div className="flex gap-2">
+                              <Input 
+                                placeholder="Add a comment..." 
+                                className="rounded-xl h-10 text-xs border-slate-200" 
+                                value={commentText[issue.id] || ''}
+                                onChange={e => setCommentText(prev => ({ ...prev, [issue.id]: e.target.value }))}
+                                onKeyDown={e => e.key === 'Enter' && handleAddComment(issue.id)}
+                              />
+                              <Button size="icon" className="rounded-xl h-10 w-10 bg-slate-900" onClick={() => handleAddComment(issue.id)}>
+                                <Send className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
-              <div className="flex gap-3 w-full md:w-auto">
-                <select className="bg-white border-slate-200 border rounded-2xl px-4 h-12 text-sm font-bold text-slate-600 shadow-sm outline-none focus:ring-2 focus:ring-emerald-500" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                  <option value="All">All Status</option>
-                  <option value="Pending">Reviewing</option>
-                  <option value="In Progress">In Action</option>
-                  <option value="Resolved">Resolved</option>
-                </select>
+
+              <div className="space-y-6">
+                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
+                  <CardHeader className="p-6 border-b border-slate-50">
+                    <CardTitle className="text-lg font-black">City Pulse Map</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="rounded-2xl overflow-hidden border-2 border-white shadow-lg h-[300px]">
+                      <IssueMapOverview issues={nearbyIssues} />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
+                  <CardHeader className="p-6 border-b border-slate-50">
+                    <CardTitle className="text-lg font-black">Top Contributors</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-4">
+                    {mockDb.users.filter(u => u.role === 'citizen').sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 5).map((u, i) => (
+                      <div key={u.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-xs text-slate-500">
+                            {i + 1}
+                          </div>
+                          <span className="font-bold text-sm text-slate-700">{u.name}</span>
+                        </div>
+                        <Badge variant="outline" className="font-black text-[10px]">{u.points || 0} pts</Badge>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
               </div>
             </div>
+          </TabsContent>
 
+          <TabsContent value="issues" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredMyIssues.length === 0 ? (
                 <div className="col-span-full text-center py-32 bg-white rounded-[2rem] border-4 border-dashed border-slate-100">
@@ -309,20 +420,15 @@ const CitizenPortal = () => {
                           <p className="text-slate-500 text-sm font-medium line-clamp-2 leading-relaxed">{issue.description}</p>
                         </div>
                         <div className="mt-auto pt-6 border-t border-slate-50 space-y-3">
-                          <div className="flex items-center gap-3 text-slate-400">
-                            <MapPin className="w-4 h-4 text-emerald-500" />
-                            <span className="text-xs font-bold truncate">{issue.location.address}</span>
-                          </div>
                           <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-slate-400">
+                              <ThumbsUp className="w-4 h-4 text-emerald-500" />
+                              <span className="text-xs font-bold">{issue.upvotes?.length || 0} Supporters</span>
+                            </div>
                             <div className="flex items-center gap-3 text-slate-400">
                               <Clock className="w-4 h-4" />
                               <span className="text-xs font-bold">{format(parseISO(issue.createdAt), 'MMM d, yyyy')}</span>
                             </div>
-                            {issue.status === 'Resolved' && (
-                              <div className="flex items-center gap-1 text-emerald-600 font-black text-[10px] uppercase tracking-widest">
-                                <Sparkles className="w-3 h-3" /> Impact Made
-                              </div>
-                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -331,48 +437,6 @@ const CitizenPortal = () => {
                 ))
               )}
             </div>
-          </TabsContent>
-
-          <TabsContent value="nearby" className="space-y-6">
-            <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
-              <CardHeader className="p-8 border-b border-slate-50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-2xl font-black text-slate-900">City Pulse</CardTitle>
-                    <CardDescription className="font-medium text-slate-500">Real-time community reports in your neighborhood.</CardDescription>
-                  </div>
-                  <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
-                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Active Radius</p>
-                    <p className="text-sm font-black text-emerald-700">5 Kilometers</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-8 space-y-8">
-                <div className="rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl">
-                  <IssueMapOverview issues={nearbyIssues} />
-                </div>
-                
-                <div className="grid gap-4">
-                  <h3 className="font-black text-lg text-slate-900 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-amber-500" /> Recent Community Actions
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {nearbyIssues.slice(0, 4).map(issue => (
-                      <div key={issue.id} className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all group">
-                        <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                          <AlertCircle className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-slate-900 truncate">{issue.title}</h4>
-                          <p className="text-xs font-medium text-slate-400 truncate">{issue.location.address}</p>
-                        </div>
-                        {getStatusBadge(issue.status)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="activity">

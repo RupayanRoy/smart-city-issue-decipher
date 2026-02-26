@@ -1,5 +1,5 @@
 import { mockDb } from '../db';
-import { Issue, IssueCategory, IssuePriority, IssueStatus, Location } from '../types';
+import { Issue, IssueCategory, IssuePriority, IssueStatus, Location, Comment } from '../types';
 import { aiService } from './aiService';
 
 export const issueService = {
@@ -21,6 +21,8 @@ export const issueService = {
         timestamp: new Date().toISOString(),
         updatedBy: 'System'
       }],
+      upvotes: [],
+      comments: [],
       escalated: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -32,6 +34,44 @@ export const issueService = {
     return newIssue;
   },
 
+  toggleUpvote: (issueId: string, userId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+
+    const index = issue.upvotes.indexOf(userId);
+    if (index === -1) {
+      issue.upvotes.push(userId);
+      // Auto-escalate priority if upvotes exceed threshold
+      if (issue.upvotes.length >= 5 && issue.priority !== 'High') {
+        issue.priority = 'High';
+      } else if (issue.upvotes.length >= 2 && issue.priority === 'Low') {
+        issue.priority = 'Medium';
+      }
+    } else {
+      issue.upvotes.splice(index, 1);
+    }
+    
+    mockDb.save();
+    return issue;
+  },
+
+  addComment: (issueId: string, userId: string, userName: string, text: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+
+    const newComment: Comment = {
+      id: Math.random().toString(36).substr(2, 9),
+      userId,
+      userName,
+      text,
+      timestamp: new Date().toISOString()
+    };
+
+    issue.comments.push(newComment);
+    mockDb.save();
+    return issue;
+  },
+
   updateStatus: (issueId: string, status: IssueStatus, adminId: string) => {
     const issue = mockDb.issues.find(i => i.id === issueId);
     if (!issue) throw new Error('Issue not found');
@@ -41,10 +81,9 @@ export const issueService = {
     
     if (status === 'Resolved') {
       issue.resolvedAt = new Date().toISOString();
-      // Award points to the citizen
       const citizen = mockDb.users.find(u => u.id === issue.citizenId);
       if (citizen) {
-        citizen.points = (citizen.points || 0) + 1;
+        citizen.points = (citizen.points || 0) + 10; // More points for resolution
       }
     }
     
@@ -80,7 +119,7 @@ export const issueService = {
     const toRad = (value: number) => (value * Math.PI) / 180;
     
     return mockDb.issues.filter(issue => {
-      const R = 6371; // Earth radius in km
+      const R = 6371;
       const dLat = toRad(issue.location.lat - lat);
       const dLon = toRad(issue.location.lng - lng);
       const a = 

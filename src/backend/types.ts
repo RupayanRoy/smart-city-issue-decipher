@@ -6,7 +6,7 @@ export interface User {
   email: string;
   role: UserRole;
   password?: string;
-  points?: number; // Added to track rewards
+  points?: number;
 }
 
 export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Other';
@@ -28,6 +28,14 @@ export interface StatusHistory {
   note?: string;
 }
 
+export interface Comment {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  timestamp: string;
+}
+
 export interface Location {
   address: string;
   lat: number;
@@ -44,13 +52,15 @@ export interface Issue {
   status: IssueStatus;
   priority: IssuePriority;
   location: Location;
-  assignedTo?: string; // Department name
+  assignedTo?: string;
   statusHistory: StatusHistory[];
+  upvotes: string[]; // Array of User IDs
+  comments: Comment[];
   escalated: boolean;
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
-  notified?: boolean; // Track if user was notified of resolution
+  notified?: boolean;
 }
 
 export interface AnalyticsData {

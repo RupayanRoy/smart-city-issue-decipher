@@ -132,7 +132,7 @@ const Login = () => {
             </div>
             <div className="space-y-1.5">
               <p className="font-bold text-slate-800 uppercase tracking-wider">Citizen Portal</p>
-              <p className="text-slate-500">User: <span className="font-mono font-bold text-slate-700">arun@example.com</span></p>
+              <p className="text-slate-500">User: <span className="font-mono font-bold text-slate-700">rupayan@example.com</span></p>
               <p className="text-slate-500">Pass: <span className="font-mono font-bold text-slate-700">password123</span></p>
             </div>
           </div>
