@@ -24,8 +24,8 @@ const CitizenPortal = () => {
     title: '',
     description: '',
     address: '',
-    lat: 40.7128,
-    lng: -74.0060
+    lat: 12.8406,
+    lng: 80.1534
   });
   const navigate = useNavigate();
 
@@ -50,7 +50,7 @@ const CitizenPortal = () => {
     });
     refreshIssues(user.id);
     setShowForm(false);
-    setFormData({ title: '', description: '', address: '', lat: 40.7128, lng: -74.0060 });
+    setFormData({ title: '', description: '', address: '', lat: 12.8406, lng: 80.1534 });
     showSuccess('Issue reported successfully! AI has categorized your request.');
   };
 

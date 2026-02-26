@@ -13,7 +13,7 @@ interface IssueMapOverviewProps {
 const IssueMapOverview: React.FC<IssueMapOverviewProps> = ({ issues }) => {
   const center: [number, number] = issues.length > 0 
     ? [issues[0].location.lat, issues[0].location.lng] 
-    : [40.7128, -74.0060];
+    : [12.8406, 80.1534];
 
   return (
     <div className="h-[500px] w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm z-0">
