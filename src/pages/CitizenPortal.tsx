@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { showSuccess, showError } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X } from 'lucide-react';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Star } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import IssueMapOverview from '@/components/IssueMapOverview';
@@ -38,13 +38,31 @@ const CitizenPortal = () => {
     const storedUser = localStorage.getItem('current_user');
     if (!storedUser) return navigate('/login');
     const parsedUser = JSON.parse(storedUser);
-    setUser(parsedUser);
+    
+    // Sync with DB to get latest points
+    const dbUser = mockDb.users.find(u => u.id === parsedUser.id);
+    setUser(dbUser || parsedUser);
+    
     refreshData(parsedUser.id);
+    checkNotifications(parsedUser.id);
   }, []);
+
+  const checkNotifications = (userId: string) => {
+    const resolvedUnnotified = mockDb.issues.filter(i => i.citizenId === userId && i.status === 'Resolved' && !i.notified);
+    
+    resolvedUnnotified.forEach(issue => {
+      showSuccess(`Great news! Your issue "${issue.title}" has been resolved. Thank you for helping our society! You've earned 1 Bronze Point! 🥉`);
+      issueService.markAsNotified(issue.id);
+    });
+  };
 
   const refreshData = (userId: string) => {
     setMyIssues(mockDb.issues.filter(i => i.citizenId === userId));
     setNearbyIssues(issueService.getIssuesByRadius(12.8406, 80.1534, 5));
+    
+    // Update local user state with latest points from DB
+    const dbUser = mockDb.users.find(u => u.id === userId);
+    if (dbUser) setUser(dbUser);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,6 +153,10 @@ const CitizenPortal = () => {
             <span className="font-bold text-xl">SmartCity</span>
           </div>
           <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+              <Trophy className="w-4 h-4 text-amber-600" />
+              <span className="text-sm font-bold text-amber-700">{user?.points || 0} Bronze Points</span>
+            </div>
             <Button variant="ghost" size="icon"><Bell className="w-5 h-5 text-slate-500" /></Button>
             <div className="h-8 w-px bg-slate-200 mx-2" />
             <div className="flex items-center gap-3">
@@ -395,6 +417,18 @@ const CitizenPortal = () => {
                     <p className="text-sm text-slate-500">{user?.email}</p>
                   </div>
                 </div>
+                
+                <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Trophy className="w-8 h-8 text-amber-600" />
+                    <div>
+                      <p className="text-sm font-bold text-amber-900">Community Rewards</p>
+                      <p className="text-xs text-amber-700">You have earned {user?.points || 0} Bronze Points for your contributions.</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-amber-600 text-white border-none">Bronze Level</Badge>
+                </div>
+
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <Label>Full Name</Label>

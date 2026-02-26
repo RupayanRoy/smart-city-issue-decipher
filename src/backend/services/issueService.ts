@@ -23,7 +23,8 @@ export const issueService = {
       }],
       escalated: false,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      notified: false
     };
 
     mockDb.issues.push(newIssue);
@@ -37,7 +38,15 @@ export const issueService = {
 
     issue.status = status;
     issue.updatedAt = new Date().toISOString();
-    if (status === 'Resolved') issue.resolvedAt = new Date().toISOString();
+    
+    if (status === 'Resolved') {
+      issue.resolvedAt = new Date().toISOString();
+      // Award points to the citizen
+      const citizen = mockDb.users.find(u => u.id === issue.citizenId);
+      if (citizen) {
+        citizen.points = (citizen.points || 0) + 1;
+      }
+    }
     
     issue.statusHistory.push({
       status,
@@ -47,6 +56,14 @@ export const issueService = {
 
     mockDb.save();
     return issue;
+  },
+
+  markAsNotified: (issueId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (issue) {
+      issue.notified = true;
+      mockDb.save();
+    }
   },
 
   assignIssue: (issueId: string, department: string) => {

@@ -6,6 +6,7 @@ export interface User {
   email: string;
   role: UserRole;
   password?: string;
+  points?: number; // Added to track rewards
 }
 
 export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Other';
@@ -49,6 +50,7 @@ export interface Issue {
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
+  notified?: boolean; // Track if user was notified of resolution
 }
 
 export interface AnalyticsData {

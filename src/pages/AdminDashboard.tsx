@@ -21,6 +21,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState<any>(null);
   const [issues, setIssues] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +39,11 @@ const AdminDashboard = () => {
     const admin = JSON.parse(localStorage.getItem('current_user') || '{}');
     issueService.updateStatus(id, status, admin.name);
     showSuccess(`Issue marked as ${status}`);
+    
+    if (status === 'Resolved') {
+      setStatusFilter('Resolved'); // "Redirect" to resolved category by filtering
+    }
+    
     refreshData();
   };
 
@@ -57,10 +63,12 @@ const AdminDashboard = () => {
     showSuccess('Exporting data to CSV... (Mock)');
   };
 
-  const filteredIssues = issues.filter(issue => 
-    issue.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    issue.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredIssues = issues.filter(issue => {
+    const matchesSearch = issue.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         issue.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || issue.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   if (!stats) return null;
 
@@ -177,79 +185,97 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="management" className="space-y-4">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input 
-                placeholder="Search by ID or Title..." 
-                className="pl-10"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input 
+                  placeholder="Search by ID or Title..." 
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <select 
+                className="bg-white border rounded-md px-3 text-sm"
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+              >
+                <option value="All">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Resolved">Resolved</option>
+              </select>
             </div>
 
             <div className="space-y-4">
-              {filteredIssues.map(issue => (
-                <Card key={issue.id} className="border-none shadow-sm overflow-hidden">
-                  <CardContent className="p-0">
-                    <div className="flex flex-col md:flex-row">
-                      {issue.imageUrl && (
-                        <div className="md:w-48 h-48 md:h-auto shrink-0 bg-slate-100 flex items-center justify-center">
-                          <img src={issue.imageUrl} alt={issue.title} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <div className="p-6 flex-1 space-y-4">
-                        <div className="flex flex-col md:flex-row justify-between gap-6">
-                          <div className="space-y-2 flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-lg">{issue.title}</h3>
-                              <Badge className={issue.priority === 'High' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800'}>
-                                {issue.priority}
-                              </Badge>
-                              {issue.escalated && <AlertTriangle className="text-orange-500 w-5 h-5" />}
-                            </div>
-                            <p className="text-slate-600 text-sm">{issue.description}</p>
-                            <div className="flex flex-wrap gap-4 text-xs text-slate-400">
-                              <span>ID: {issue.id}</span>
-                              <span>Category: {issue.category}</span>
-                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {issue.location.address}</span>
-                            </div>
+              {filteredIssues.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-xl border border-slate-200">
+                  <p className="text-slate-400">No issues found in this category.</p>
+                </div>
+              ) : (
+                filteredIssues.map(issue => (
+                  <Card key={issue.id} className="border-none shadow-sm overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="flex flex-col md:flex-row">
+                        {issue.imageUrl && (
+                          <div className="md:w-48 h-48 md:h-auto shrink-0 bg-slate-100 flex items-center justify-center">
+                            <img src={issue.imageUrl} alt={issue.title} className="w-full h-full object-cover" />
                           </div>
-                          
-                          <div className="flex flex-col gap-3 min-w-[200px]">
-                            <div className="flex items-center gap-2">
-                              <Badge className={issue.status === 'Resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                                {issue.status}
-                              </Badge>
-                              {issue.assignedTo && <Badge variant="outline">Assigned: {issue.assignedTo}</Badge>}
+                        )}
+                        <div className="p-6 flex-1 space-y-4">
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="space-y-2 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-lg">{issue.title}</h3>
+                                <Badge className={issue.priority === 'High' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800'}>
+                                  {issue.priority}
+                                </Badge>
+                                {issue.escalated && <AlertTriangle className="text-orange-500 w-5 h-5" />}
+                              </div>
+                              <p className="text-slate-600 text-sm">{issue.description}</p>
+                              <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+                                <span>ID: {issue.id}</span>
+                                <span>Category: {issue.category}</span>
+                                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {issue.location.address}</span>
+                              </div>
                             </div>
                             
-                            <div className="flex gap-2">
-                              {issue.status === 'Pending' && (
-                                <Button size="sm" className="flex-1" onClick={() => handleStatusUpdate(issue.id, 'In Progress')}>
-                                  <Play className="mr-2 w-4 h-4" /> Start
-                                </Button>
-                              )}
-                              {issue.status === 'In Progress' && (
-                                <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(issue.id, 'Resolved')}>
-                                  <CheckCircle className="mr-2 w-4 h-4" /> Resolve
-                                </Button>
-                              )}
-                              <select 
-                                className="text-xs border rounded px-2 bg-white"
-                                onChange={(e) => handleAssign(issue.id, e.target.value)}
-                                value={issue.assignedTo || ""}
-                              >
-                                <option value="" disabled>Assign Dept</option>
-                                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                              </select>
+                            <div className="flex flex-col gap-3 min-w-[200px]">
+                              <div className="flex items-center gap-2">
+                                <Badge className={issue.status === 'Resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                                  {issue.status}
+                                </Badge>
+                                {issue.assignedTo && <Badge variant="outline">Assigned: {issue.assignedTo}</Badge>}
+                              </div>
+                              
+                              <div className="flex gap-2">
+                                {issue.status === 'Pending' && (
+                                  <Button size="sm" className="flex-1" onClick={() => handleStatusUpdate(issue.id, 'In Progress')}>
+                                    <Play className="mr-2 w-4 h-4" /> Start
+                                  </Button>
+                                )}
+                                {issue.status === 'In Progress' && (
+                                  <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(issue.id, 'Resolved')}>
+                                    <CheckCircle className="mr-2 w-4 h-4" /> Resolve
+                                  </Button>
+                                )}
+                                <select 
+                                  className="text-xs border rounded px-2 bg-white"
+                                  onChange={(e) => handleAssign(issue.id, e.target.value)}
+                                  value={issue.assignedTo || ""}
+                                >
+                                  <option value="" disabled>Assign Dept</option>
+                                  {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
 
