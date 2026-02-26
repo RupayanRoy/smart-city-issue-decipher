@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { showSuccess, showError } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Star } from 'lucide-react';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import IssueMapOverview from '@/components/IssueMapOverview';
@@ -39,7 +39,6 @@ const CitizenPortal = () => {
     if (!storedUser) return navigate('/login');
     const parsedUser = JSON.parse(storedUser);
     
-    // Sync with DB to get latest points
     const dbUser = mockDb.users.find(u => u.id === parsedUser.id);
     setUser(dbUser || parsedUser);
     
@@ -49,9 +48,8 @@ const CitizenPortal = () => {
 
   const checkNotifications = (userId: string) => {
     const resolvedUnnotified = mockDb.issues.filter(i => i.citizenId === userId && i.status === 'Resolved' && !i.notified);
-    
     resolvedUnnotified.forEach(issue => {
-      showSuccess(`Great news! Your issue "${issue.title}" has been resolved. Thank you for helping our society! You've earned 1 Bronze Point! 🥉`);
+      showSuccess(`Heroic Work! Your report "${issue.title}" has been resolved. You've earned 1 Bronze Point! 🥉`);
       issueService.markAsNotified(issue.id);
     });
   };
@@ -59,8 +57,6 @@ const CitizenPortal = () => {
   const refreshData = (userId: string) => {
     setMyIssues(mockDb.issues.filter(i => i.citizenId === userId));
     setNearbyIssues(issueService.getIssuesByRadius(12.8406, 80.1534, 5));
-    
-    // Update local user state with latest points from DB
     const dbUser = mockDb.users.find(u => u.id === userId);
     if (dbUser) setUser(dbUser);
   };
@@ -85,11 +81,7 @@ const CitizenPortal = () => {
       if (data && data.display_name) {
         setFormData(prev => ({ ...prev, address: data.display_name }));
       }
-    } catch (error) {
-      console.error("Reverse geocoding failed", error);
-    } finally {
-      setIsGeocoding(false);
-    }
+    } catch (error) {} finally { setIsGeocoding(false); }
   };
 
   const handleAddressSearch = async () => {
@@ -101,15 +93,9 @@ const CitizenPortal = () => {
       if (data && data.length > 0) {
         const { lat, lon } = data[0];
         setFormData(prev => ({ ...prev, lat: parseFloat(lat), lng: parseFloat(lon) }));
-        showSuccess("Location found on map!");
-      } else {
-        showError("Could not find that address on the map.");
+        showSuccess("Location pinned!");
       }
-    } catch (error) {
-      showError("Error searching for address.");
-    } finally {
-      setIsGeocoding(false);
-    }
+    } catch (error) {} finally { setIsGeocoding(false); }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -123,213 +109,219 @@ const CitizenPortal = () => {
     refreshData(user.id);
     setShowForm(false);
     setFormData({ title: '', description: '', address: '', lat: 12.8406, lng: 80.1534, imageUrl: '' });
-    showSuccess('Issue reported successfully! AI has categorized your request.');
+    showSuccess('Thank you for your contribution! Our team is on it.');
   };
 
   const filteredMyIssues = myIssues.filter(issue => {
-    const matchesSearch = issue.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         issue.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = issue.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || issue.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Pending': return 'bg-yellow-100 text-yellow-800';
-      case 'In Progress': return 'bg-blue-100 text-blue-800';
-      case 'Resolved': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Pending': return <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">Reviewing</Badge>;
+      case 'In Progress': return <Badge className="bg-sky-100 text-sky-700 border-sky-200 hover:bg-sky-100">In Action</Badge>;
+      case 'Resolved': return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">Resolved</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center">
-              <Plus className="text-white w-5 h-5" />
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-100">
+              <Heart className="text-white w-6 h-6 fill-current" />
             </div>
-            <span className="font-bold text-xl">SmartCity</span>
+            <div>
+              <span className="font-black text-2xl tracking-tight text-slate-900">CityCare</span>
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Citizen Portal</p>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-              <Trophy className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-bold text-amber-700">{user?.points || 0} Bronze Points</span>
-            </div>
-            <Button variant="ghost" size="icon"><Bell className="w-5 h-5 text-slate-500" /></Button>
-            <div className="h-8 w-px bg-slate-200 mx-2" />
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium">{user?.name}</p>
-                <p className="text-xs text-slate-500">Citizen Account</p>
+          <div className="flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
+              <div className="bg-amber-100 p-1.5 rounded-lg">
+                <Trophy className="w-4 h-4 text-amber-600" />
               </div>
-              <Button variant="ghost" size="icon" onClick={() => { localStorage.removeItem('current_user'); navigate('/login'); }}>
-                <LogOut className="w-5 h-5 text-slate-500" />
-              </Button>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Impact Points</p>
+                <p className="text-sm font-black text-slate-900">{user?.points || 0} Bronze</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100"><Bell className="w-5 h-5 text-slate-500" /></Button>
+              <div className="h-10 w-px bg-slate-100" />
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold text-slate-900">{user?.name}</p>
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase">Community Hero</p>
+                </div>
+                <Button variant="ghost" size="icon" className="rounded-xl hover:bg-red-50 hover:text-red-600" onClick={() => { localStorage.removeItem('current_user'); navigate('/login'); }}>
+                  <LogOut className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 space-y-6">
+      <main className="max-w-6xl mx-auto p-6 space-y-8">
+        <div className="bg-emerald-900 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-emerald-200">
+          <div className="relative z-10 space-y-4 max-w-2xl">
+            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 backdrop-blur-sm px-3 py-1">Community Impact</Badge>
+            <h2 className="text-4xl font-black leading-tight">Your voice shapes our city's future.</h2>
+            <p className="text-emerald-100/80 text-lg font-medium">Report issues, track progress, and earn rewards for making your neighborhood a better place to live.</p>
+            <Button onClick={() => setShowForm(!showForm)} size="lg" className="bg-white text-emerald-900 hover:bg-emerald-50 rounded-2xl font-bold px-8 h-14 shadow-xl shadow-emerald-950/20">
+              {showForm ? 'Close Form' : <><Plus className="mr-2 w-5 h-5" /> Report an Issue</>}
+            </Button>
+          </div>
+          <Sparkles className="absolute top-10 right-10 w-32 h-32 text-emerald-800/50 -rotate-12" />
+          <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-emerald-800/30 rounded-full blur-3xl" />
+        </div>
+
+        {showForm && (
+          <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-[2rem] overflow-hidden animate-in fade-in slide-in-from-top-8 duration-500">
+            <CardHeader className="bg-slate-50 p-8 border-b border-slate-100">
+              <CardTitle className="text-2xl font-black text-slate-900">New Community Report</CardTitle>
+              <CardDescription className="text-slate-500 font-medium">Help us identify what needs attention in your area.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label className="text-slate-700 font-bold ml-1">What's the issue?</Label>
+                      <Input required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Broken street light on Oak Avenue" className="rounded-2xl h-14 border-slate-200 focus:ring-emerald-500" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-slate-700 font-bold ml-1">Tell us more</Label>
+                      <Textarea required className="min-h-[120px] rounded-2xl border-slate-200 focus:ring-emerald-500 p-4" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Provide as much detail as possible..." />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-slate-700 font-bold ml-1">Visual Evidence</Label>
+                      <div className="flex items-center gap-6">
+                        {formData.imageUrl ? (
+                          <div className="relative w-32 h-32 rounded-2xl overflow-hidden border-4 border-white shadow-lg">
+                            <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                            <button type="button" onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-lg"><X className="w-4 h-4" /></button>
+                          </div>
+                        ) : (
+                          <label className="w-32 h-32 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-all group">
+                            <Camera className="w-8 h-8 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-2 group-hover:text-emerald-600">Add Photo</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                          </label>
+                        )}
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-bold text-slate-700">Upload a photo</p>
+                          <p className="text-xs text-slate-400 leading-relaxed">Photos help our response teams understand the situation better and act faster.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-slate-700 font-bold ml-1">Location</Label>
+                      <div className="flex gap-3">
+                        <Input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Street address or landmark" className="flex-1 rounded-2xl h-14 border-slate-200" />
+                        <Button type="button" variant="outline" className="rounded-2xl h-14 px-6 border-2 font-bold" onClick={handleAddressSearch} disabled={isGeocoding}>
+                          {isGeocoding ? <Loader2 className="w-5 h-5 animate-spin" /> : "Find"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <Label className="text-slate-700 font-bold ml-1 flex items-center justify-between">
+                      Pin on Map
+                      {isGeocoding && <span className="text-[10px] text-emerald-600 font-black uppercase animate-pulse">Locating...</span>}
+                    </Label>
+                    <div className="rounded-[2rem] overflow-hidden border-4 border-white shadow-xl">
+                      <LocationPicker lat={formData.lat} lng={formData.lng} onChange={handleMapChange} />
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-3">
+                      <MapPin className="w-5 h-5 text-emerald-600" />
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Coordinates: {formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}</p>
+                    </div>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full py-8 text-xl font-black bg-emerald-600 hover:bg-emerald-700 rounded-2xl shadow-xl shadow-emerald-100 transition-all transform hover:-translate-y-1">Submit Community Report</Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
         <Tabs defaultValue="issues" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="issues">My Issues</TabsTrigger>
-            <TabsTrigger value="nearby">Nearby Issues</TabsTrigger>
-            <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-            <TabsTrigger value="profile">My Profile</TabsTrigger>
+          <TabsList className="mb-8 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm inline-flex">
+            <TabsTrigger value="issues" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all">My Contributions</TabsTrigger>
+            <TabsTrigger value="nearby" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all">City Pulse</TabsTrigger>
+            <TabsTrigger value="activity" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all">Recent Activity</TabsTrigger>
           </TabsList>
 
           <TabsContent value="issues" className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between gap-4">
-              <div className="flex-1 flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    placeholder="Search your issues..." 
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                <select 
-                  className="bg-white border rounded-md px-3 text-sm"
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
-                >
+            <div className="flex flex-col md:flex-row justify-between gap-4 items-center">
+              <div className="relative w-full md:max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Input placeholder="Search your reports..." className="pl-12 h-12 rounded-2xl border-slate-200 bg-white shadow-sm" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+              </div>
+              <div className="flex gap-3 w-full md:w-auto">
+                <select className="bg-white border-slate-200 border rounded-2xl px-4 h-12 text-sm font-bold text-slate-600 shadow-sm outline-none focus:ring-2 focus:ring-emerald-500" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                   <option value="All">All Status</option>
-                  <option value="Pending">Pending</option>
-                  <option value="In Progress">In Progress</option>
+                  <option value="Pending">Reviewing</option>
+                  <option value="In Progress">In Action</option>
                   <option value="Resolved">Resolved</option>
                 </select>
               </div>
-              <Button onClick={() => setShowForm(!showForm)}>
-                {showForm ? 'Cancel' : <><Plus className="mr-2 w-4 h-4" /> Report New Issue</>}
-              </Button>
             </div>
 
-            {showForm && (
-              <Card className="border-none shadow-lg animate-in fade-in slide-in-from-top-4">
-                <CardHeader>
-                  <CardTitle>Report New Issue</CardTitle>
-                  <CardDescription>Provide details and pin the location on the map.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Issue Title</Label>
-                          <Input required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Large pothole on Main St" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Description</Label>
-                          <Textarea required className="min-h-[100px]" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the issue in detail..." />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Attach Photo (Optional)</Label>
-                          <div className="flex items-center gap-4">
-                            {formData.imageUrl ? (
-                              <div className="relative w-24 h-24 rounded-lg overflow-hidden border">
-                                <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                                <button 
-                                  type="button" 
-                                  onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
-                                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            ) : (
-                              <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
-                                <Camera className="w-6 h-6 text-slate-400" />
-                                <span className="text-[10px] text-slate-500 mt-1">Upload</span>
-                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                              </label>
-                            )}
-                            <p className="text-xs text-slate-500">Upload a clear photo of the issue to help us resolve it faster.</p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Location Address</Label>
-                          <div className="flex gap-2">
-                            <Input 
-                              required 
-                              value={formData.address} 
-                              onChange={e => setFormData({...formData, address: e.target.value})} 
-                              placeholder="123 Main St, Downtown" 
-                              className="flex-1"
-                            />
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={handleAddressSearch}
-                              disabled={isGeocoding}
-                            >
-                              {isGeocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : "Find"}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center justify-between">
-                          Pin Location on Map
-                          {isGeocoding && <span className="text-[10px] text-primary animate-pulse">Updating...</span>}
-                        </Label>
-                        <LocationPicker 
-                          lat={formData.lat} 
-                          lng={formData.lng} 
-                          onChange={handleMapChange} 
-                        />
-                        <p className="text-xs text-slate-400">Coordinates: {formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}</p>
-                      </div>
-                    </div>
-                    <Button type="submit" className="w-full py-6 text-lg">Submit Report</Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredMyIssues.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-slate-200">
-                  <p className="text-slate-400">No issues found matching your criteria.</p>
+                <div className="col-span-full text-center py-32 bg-white rounded-[2rem] border-4 border-dashed border-slate-100">
+                  <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <HandHelping className="w-10 h-10 text-slate-300" />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 mb-2">No reports yet</h3>
+                  <p className="text-slate-400 font-medium max-w-xs mx-auto">Start your journey as a community hero by reporting your first issue.</p>
                 </div>
               ) : (
                 filteredMyIssues.map(issue => (
-                  <Card key={issue.id} className="border-none shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                    <div className="flex flex-col md:flex-row">
+                  <Card key={issue.id} className="border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-[2rem] overflow-hidden group bg-white">
+                    <div className="flex flex-col h-full">
                       {issue.imageUrl && (
-                        <div className="md:w-48 h-48 md:h-auto shrink-0">
-                          <img src={issue.imageUrl} alt={issue.title} className="w-full h-full object-cover" />
+                        <div className="h-56 overflow-hidden relative">
+                          <img src={issue.imageUrl} alt={issue.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          <div className="absolute top-4 right-4">
+                            {getStatusBadge(issue.status)}
+                          </div>
                         </div>
                       )}
-                      <CardContent className="p-6 flex-1">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold text-lg">{issue.title}</h3>
-                              <Badge variant="secondary">{issue.category}</Badge>
-                              {issue.escalated && <Badge className="bg-red-100 text-red-800 border-none">Escalated</Badge>}
-                            </div>
-                            <p className="text-slate-600 text-sm line-clamp-2">{issue.description}</p>
+                      <CardContent className="p-8 flex-1 flex flex-col">
+                        {!issue.imageUrl && (
+                          <div className="flex justify-between items-start mb-6">
+                            <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold rounded-lg">{issue.category}</Badge>
+                            {getStatusBadge(issue.status)}
                           </div>
-                          <Badge className={getStatusColor(issue.status)}>{issue.status}</Badge>
+                        )}
+                        <div className="space-y-3 mb-6">
+                          <h3 className="font-black text-xl text-slate-900 leading-tight">{issue.title}</h3>
+                          <p className="text-slate-500 text-sm font-medium line-clamp-2 leading-relaxed">{issue.description}</p>
                         </div>
-                        <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="w-4 h-4" /> {issue.location.address}
+                        <div className="mt-auto pt-6 border-t border-slate-50 space-y-3">
+                          <div className="flex items-center gap-3 text-slate-400">
+                            <MapPin className="w-4 h-4 text-emerald-500" />
+                            <span className="text-xs font-bold truncate">{issue.location.address}</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" /> {format(parseISO(issue.createdAt), 'MMM d, yyyy')}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <AlertCircle className={`w-4 h-4 ${issue.priority === 'High' ? 'text-red-500' : 'text-slate-400'}`} /> 
-                            Priority: {issue.priority}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-slate-400">
+                              <Clock className="w-4 h-4" />
+                              <span className="text-xs font-bold">{format(parseISO(issue.createdAt), 'MMM d, yyyy')}</span>
+                            </div>
+                            {issue.status === 'Resolved' && (
+                              <div className="flex items-center gap-1 text-emerald-600 font-black text-[10px] uppercase tracking-widest">
+                                <Sparkles className="w-3 h-3" /> Impact Made
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -341,104 +333,70 @@ const CitizenPortal = () => {
           </TabsContent>
 
           <TabsContent value="nearby" className="space-y-6">
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapIcon className="w-5 h-5 text-primary" /> Issues Near You
-                </CardTitle>
-                <CardDescription>Showing issues within 5km of VIT Chennai.</CardDescription>
+            <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
+              <CardHeader className="p-8 border-b border-slate-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl font-black text-slate-900">City Pulse</CardTitle>
+                    <CardDescription className="font-medium text-slate-500">Real-time community reports in your neighborhood.</CardDescription>
+                  </div>
+                  <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Active Radius</p>
+                    <p className="text-sm font-black text-emerald-700">5 Kilometers</p>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <IssueMapOverview issues={nearbyIssues} />
+              <CardContent className="p-8 space-y-8">
+                <div className="rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl">
+                  <IssueMapOverview issues={nearbyIssues} />
+                </div>
                 
                 <div className="grid gap-4">
-                  <h3 className="font-bold text-lg">Recent Nearby Reports</h3>
-                  {nearbyIssues.length === 0 ? (
-                    <p className="text-slate-500 text-center py-10">No issues reported in this area yet.</p>
-                  ) : (
-                    nearbyIssues.slice(0, 5).map(issue => (
-                      <div key={issue.id} className="flex items-start gap-4 p-4 bg-white rounded-lg border border-slate-100 shadow-sm">
-                        <div className={`p-2 rounded-lg ${getStatusColor(issue.status)}`}>
-                          <AlertCircle className="w-5 h-5" />
+                  <h3 className="font-black text-lg text-slate-900 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-500" /> Recent Community Actions
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {nearbyIssues.slice(0, 4).map(issue => (
+                      <div key={issue.id} className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all group">
+                        <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                          <AlertCircle className="w-6 h-6" />
                         </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <h4 className="font-bold">{issue.title}</h4>
-                            <Badge variant="outline" className="text-[10px]">{issue.status}</Badge>
-                          </div>
-                          <p className="text-sm text-slate-500 line-clamp-1">{issue.description}</p>
-                          <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400">
-                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {issue.location.address}</span>
-                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {format(parseISO(issue.createdAt), 'MMM d')}</span>
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-slate-900 truncate">{issue.title}</h4>
+                          <p className="text-xs font-medium text-slate-400 truncate">{issue.location.address}</p>
                         </div>
+                        {getStatusBadge(issue.status)}
                       </div>
-                    ))
-                  )}
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="activity">
-            <Card className="border-none shadow-sm">
-              <CardHeader><CardTitle>Recent Updates</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {myIssues.flatMap(i => i.statusHistory.map((h: any) => ({ ...h, issueTitle: i.title }))).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((activity, idx) => (
-                    <div key={idx} className="flex gap-4">
-                      <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium">
-                          Issue "<span className="text-primary">{activity.issueTitle}</span>" marked as <span className="font-bold">{activity.status}</span>
+            <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
+              <CardHeader className="p-8 border-b border-slate-50">
+                <CardTitle className="text-2xl font-black text-slate-900">Impact Timeline</CardTitle>
+                <CardDescription className="font-medium text-slate-500">Track the journey of your contributions.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8">
+                <div className="space-y-10 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                  {myIssues.flatMap(i => i.statusHistory.map((h: any) => ({ ...h, issueTitle: i.title, issueStatus: i.status }))).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((activity, idx) => (
+                    <div key={idx} className="flex gap-6 relative z-10">
+                      <div className={`w-6 h-6 rounded-full border-4 border-white shadow-md shrink-0 mt-1 ${activity.status === 'Resolved' ? 'bg-emerald-500' : activity.status === 'In Progress' ? 'bg-sky-500' : 'bg-amber-500'}`} />
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-slate-900">
+                          Report "<span className="text-emerald-600">{activity.issueTitle}</span>" moved to <span className="uppercase tracking-widest text-[10px] px-2 py-0.5 bg-slate-100 rounded-md ml-1">{activity.status}</span>
                         </p>
-                        <p className="text-xs text-slate-500">{format(parseISO(activity.timestamp), 'MMM d, yyyy HH:mm')} • Updated by {activity.updatedBy}</p>
+                        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <span>{format(parseISO(activity.timestamp), 'MMM d, yyyy • HH:mm')}</span>
+                          <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                          <span>Action by {activity.updatedBy}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="profile">
-            <Card className="border-none shadow-sm max-w-2xl">
-              <CardHeader>
-                <CardTitle>Profile Settings</CardTitle>
-                <CardDescription>Manage your personal information and account security.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <UserIcon className="w-8 h-8 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-lg">{user?.name}</h4>
-                    <p className="text-sm text-slate-500">{user?.email}</p>
-                  </div>
-                </div>
-                
-                <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Trophy className="w-8 h-8 text-amber-600" />
-                    <div>
-                      <p className="text-sm font-bold text-amber-900">Community Rewards</p>
-                      <p className="text-xs text-amber-700">You have earned {user?.points || 0} Bronze Points for your contributions.</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-amber-600 text-white border-none">Bronze Level</Badge>
-                </div>
-
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    <Label>Full Name</Label>
-                    <Input defaultValue={user?.name} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email Address</Label>
-                    <Input defaultValue={user?.email} disabled />
-                  </div>
-                  <Button className="w-fit">Update Profile</Button>
                 </div>
               </CardContent>
             </Card>
