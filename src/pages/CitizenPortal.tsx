@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { showSuccess, showError } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2 } from 'lucide-react';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import IssueMapOverview from '@/components/IssueMapOverview';
@@ -29,7 +29,8 @@ const CitizenPortal = () => {
     description: '',
     address: '',
     lat: 12.8406,
-    lng: 80.1534
+    lng: 80.1534,
+    imageUrl: ''
   });
   const navigate = useNavigate();
 
@@ -46,7 +47,17 @@ const CitizenPortal = () => {
     setNearbyIssues(issueService.getIssuesByRadius(12.8406, 80.1534, 5));
   };
 
-  // Reverse Geocoding: Lat/Lng -> Address
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, imageUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleMapChange = async (lat: number, lng: number) => {
     setFormData(prev => ({ ...prev, lat, lng }));
     setIsGeocoding(true);
@@ -63,7 +74,6 @@ const CitizenPortal = () => {
     }
   };
 
-  // Geocoding: Address -> Lat/Lng
   const handleAddressSearch = async () => {
     if (!formData.address.trim()) return;
     setIsGeocoding(true);
@@ -89,11 +99,12 @@ const CitizenPortal = () => {
     issueService.createIssue(user.id, {
       title: formData.title,
       description: formData.description,
+      imageUrl: formData.imageUrl,
       location: { address: formData.address, lat: formData.lat, lng: formData.lng }
     });
     refreshData(user.id);
     setShowForm(false);
-    setFormData({ title: '', description: '', address: '', lat: 12.8406, lng: 80.1534 });
+    setFormData({ title: '', description: '', address: '', lat: 12.8406, lng: 80.1534, imageUrl: '' });
     showSuccess('Issue reported successfully! AI has categorized your request.');
   };
 
@@ -180,7 +191,7 @@ const CitizenPortal = () => {
               <Card className="border-none shadow-lg animate-in fade-in slide-in-from-top-4">
                 <CardHeader>
                   <CardTitle>Report New Issue</CardTitle>
-                  <CardDescription>Pin the exact location on the map or type an address.</CardDescription>
+                  <CardDescription>Provide details and pin the location on the map.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-6">
@@ -192,8 +203,34 @@ const CitizenPortal = () => {
                         </div>
                         <div className="space-y-2">
                           <Label>Description</Label>
-                          <Textarea required className="min-h-[120px]" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the issue in detail..." />
+                          <Textarea required className="min-h-[100px]" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the issue in detail..." />
                         </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Attach Photo (Optional)</Label>
+                          <div className="flex items-center gap-4">
+                            {formData.imageUrl ? (
+                              <div className="relative w-24 h-24 rounded-lg overflow-hidden border">
+                                <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                                <button 
+                                  type="button" 
+                                  onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                                <Camera className="w-6 h-6 text-slate-400" />
+                                <span className="text-[10px] text-slate-500 mt-1">Upload</span>
+                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                              </label>
+                            )}
+                            <p className="text-xs text-slate-500">Upload a clear photo of the issue to help us resolve it faster.</p>
+                          </div>
+                        </div>
+
                         <div className="space-y-2">
                           <Label>Location Address</Label>
                           <div className="flex gap-2">
@@ -211,7 +248,7 @@ const CitizenPortal = () => {
                               onClick={handleAddressSearch}
                               disabled={isGeocoding}
                             >
-                              {isGeocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : "Find on Map"}
+                              {isGeocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : "Find"}
                             </Button>
                           </div>
                         </div>
@@ -219,7 +256,7 @@ const CitizenPortal = () => {
                       <div className="space-y-2">
                         <Label className="flex items-center justify-between">
                           Pin Location on Map
-                          {isGeocoding && <span className="text-[10px] text-primary animate-pulse">Updating address...</span>}
+                          {isGeocoding && <span className="text-[10px] text-primary animate-pulse">Updating...</span>}
                         </Label>
                         <LocationPicker 
                           lat={formData.lat} 
@@ -242,32 +279,39 @@ const CitizenPortal = () => {
                 </div>
               ) : (
                 filteredMyIssues.map(issue => (
-                  <Card key={issue.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-lg">{issue.title}</h3>
-                            <Badge variant="secondary">{issue.category}</Badge>
-                            {issue.escalated && <Badge className="bg-red-100 text-red-800 border-none">Escalated</Badge>}
+                  <Card key={issue.id} className="border-none shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                    <div className="flex flex-col md:flex-row">
+                      {issue.imageUrl && (
+                        <div className="md:w-48 h-48 md:h-auto shrink-0">
+                          <img src={issue.imageUrl} alt={issue.title} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <CardContent className="p-6 flex-1">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-lg">{issue.title}</h3>
+                              <Badge variant="secondary">{issue.category}</Badge>
+                              {issue.escalated && <Badge className="bg-red-100 text-red-800 border-none">Escalated</Badge>}
+                            </div>
+                            <p className="text-slate-600 text-sm line-clamp-2">{issue.description}</p>
                           </div>
-                          <p className="text-slate-600 text-sm line-clamp-2">{issue.description}</p>
+                          <Badge className={getStatusColor(issue.status)}>{issue.status}</Badge>
                         </div>
-                        <Badge className={getStatusColor(issue.status)}>{issue.status}</Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" /> {issue.location.address}
+                        <div className="flex flex-wrap gap-4 text-sm text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-4 h-4" /> {issue.location.address}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" /> {format(parseISO(issue.createdAt), 'MMM d, yyyy')}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <AlertCircle className={`w-4 h-4 ${issue.priority === 'High' ? 'text-red-500' : 'text-slate-400'}`} /> 
+                            Priority: {issue.priority}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" /> {format(parseISO(issue.createdAt), 'MMM d, yyyy')}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <AlertCircle className={`w-4 h-4 ${issue.priority === 'High' ? 'text-red-500' : 'text-slate-400'}`} /> 
-                          Priority: {issue.priority}
-                        </div>
-                      </div>
-                    </CardContent>
+                      </CardContent>
+                    </div>
                   </Card>
                 ))
               )}

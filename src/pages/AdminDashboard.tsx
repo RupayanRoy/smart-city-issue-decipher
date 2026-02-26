@@ -12,7 +12,7 @@ import { escalationService } from '@/backend/services/escalationService';
 import { DEPARTMENTS } from '@/backend/types';
 import { showSuccess } from '@/utils/toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon } from 'lucide-react';
+import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon, ImageIcon } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -189,52 +189,61 @@ const AdminDashboard = () => {
 
             <div className="space-y-4">
               {filteredIssues.map(issue => (
-                <Card key={issue.id} className="border-none shadow-sm">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row justify-between gap-6">
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-lg">{issue.title}</h3>
-                          <Badge className={issue.priority === 'High' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800'}>
-                            {issue.priority}
-                          </Badge>
-                          {issue.escalated && <AlertTriangle className="text-orange-500 w-5 h-5" />}
+                <Card key={issue.id} className="border-none shadow-sm overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="flex flex-col md:flex-row">
+                      {issue.imageUrl && (
+                        <div className="md:w-48 h-48 md:h-auto shrink-0 bg-slate-100 flex items-center justify-center">
+                          <img src={issue.imageUrl} alt={issue.title} className="w-full h-full object-cover" />
                         </div>
-                        <p className="text-slate-600 text-sm">{issue.description}</p>
-                        <div className="flex flex-wrap gap-4 text-xs text-slate-400">
-                          <span>ID: {issue.id}</span>
-                          <span>Category: {issue.category}</span>
-                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {issue.location.address}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col gap-3 min-w-[200px]">
-                        <div className="flex items-center gap-2">
-                          <Badge className={issue.status === 'Resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                            {issue.status}
-                          </Badge>
-                          {issue.assignedTo && <Badge variant="outline">Assigned: {issue.assignedTo}</Badge>}
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          {issue.status === 'Pending' && (
-                            <Button size="sm" className="flex-1" onClick={() => handleStatusUpdate(issue.id, 'In Progress')}>
-                              <Play className="mr-2 w-4 h-4" /> Start
-                            </Button>
-                          )}
-                          {issue.status === 'In Progress' && (
-                            <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(issue.id, 'Resolved')}>
-                              <CheckCircle className="mr-2 w-4 h-4" /> Resolve
-                            </Button>
-                          )}
-                          <select 
-                            className="text-xs border rounded px-2 bg-white"
-                            onChange={(e) => handleAssign(issue.id, e.target.value)}
-                            value={issue.assignedTo || ""}
-                          >
-                            <option value="" disabled>Assign Dept</option>
-                            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                          </select>
+                      )}
+                      <div className="p-6 flex-1 space-y-4">
+                        <div className="flex flex-col md:flex-row justify-between gap-6">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-lg">{issue.title}</h3>
+                              <Badge className={issue.priority === 'High' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800'}>
+                                {issue.priority}
+                              </Badge>
+                              {issue.escalated && <AlertTriangle className="text-orange-500 w-5 h-5" />}
+                            </div>
+                            <p className="text-slate-600 text-sm">{issue.description}</p>
+                            <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+                              <span>ID: {issue.id}</span>
+                              <span>Category: {issue.category}</span>
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {issue.location.address}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col gap-3 min-w-[200px]">
+                            <div className="flex items-center gap-2">
+                              <Badge className={issue.status === 'Resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                                {issue.status}
+                              </Badge>
+                              {issue.assignedTo && <Badge variant="outline">Assigned: {issue.assignedTo}</Badge>}
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              {issue.status === 'Pending' && (
+                                <Button size="sm" className="flex-1" onClick={() => handleStatusUpdate(issue.id, 'In Progress')}>
+                                  <Play className="mr-2 w-4 h-4" /> Start
+                                </Button>
+                              )}
+                              {issue.status === 'In Progress' && (
+                                <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(issue.id, 'Resolved')}>
+                                  <CheckCircle className="mr-2 w-4 h-4" /> Resolve
+                                </Button>
+                              )}
+                              <select 
+                                className="text-xs border rounded px-2 bg-white"
+                                onChange={(e) => handleAssign(issue.id, e.target.value)}
+                                value={issue.assignedTo || ""}
+                              >
+                                <option value="" disabled>Assign Dept</option>
+                                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                              </select>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
