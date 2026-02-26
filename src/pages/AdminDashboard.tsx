@@ -12,7 +12,7 @@ import { escalationService } from '@/backend/services/escalationService';
 import { DEPARTMENTS } from '@/backend/types';
 import { showSuccess } from '@/utils/toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon, ImageIcon, Activity, BarChart3, LayoutDashboard } from 'lucide-react';
+import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon, ImageIcon, Activity, BarChart3, LayoutDashboard, Clock, Heart } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 import Footer from '@/components/Footer';
 
@@ -175,7 +175,7 @@ const AdminDashboard = () => {
                             
                             <div className="flex flex-col gap-4 min-w-[240px] bg-slate-50 p-6 rounded-3xl border border-slate-100">
                               <div className="flex items-center justify-between mb-2">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Status</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Current Status</p>
                                 <Badge className={`rounded-lg font-black text-[10px] uppercase tracking-widest ${issue.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                   {issue.status}
                                 </Badge>
