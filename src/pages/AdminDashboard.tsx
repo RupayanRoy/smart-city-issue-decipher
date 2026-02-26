@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { analyticsService } from '@/backend/services/analyticsService';
 import { issueService } from '@/backend/services/issueService';
 import { escalationService } from '@/backend/services/escalationService';
+import { DEPARTMENTS } from '@/backend/types';
 import { showSuccess } from '@/utils/toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle } from 'lucide-react';
+import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users } from 'lucide-react';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState<any>(null);
   const [issues, setIssues] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,65 +40,78 @@ const AdminDashboard = () => {
     refreshData();
   };
 
+  const handleAssign = (id: string, dept: string) => {
+    issueService.assignIssue(id, dept);
+    showSuccess(`Assigned to ${dept}`);
+    refreshData();
+  };
+
   const runEscalation = () => {
     const count = escalationService.runEscalationCheck();
     showSuccess(`${count} issues escalated based on age.`);
     refreshData();
   };
 
+  const handleExport = () => {
+    showSuccess('Exporting data to CSV... (Mock)');
+  };
+
+  const filteredIssues = issues.filter(issue => 
+    issue.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    issue.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (!stats) return null;
 
   const pieData = Object.entries(stats.byCategory).map(([name, value]) => ({ name, value }));
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <header className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-primary p-2 rounded-lg">
-              <Shield className="text-white w-6 h-6" />
+            <div className="bg-primary p-1.5 rounded-lg">
+              <Shield className="text-white w-5 h-5" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">Admin Command Center</h1>
+            <h1 className="font-bold text-xl">Admin Command Center</h1>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={runEscalation} variant="outline" className="border-orange-200 text-orange-700 hover:bg-orange-50">
-              <RefreshCw className="mr-2 w-4 h-4" /> Run Escalation Check
+          <div className="flex items-center gap-3">
+            <Button onClick={runEscalation} variant="outline" size="sm" className="hidden md:flex">
+              <RefreshCw className="mr-2 w-4 h-4" /> Run Escalation
             </Button>
-            <Button onClick={() => { localStorage.removeItem('current_user'); navigate('/login'); }} variant="ghost">Logout</Button>
+            <Button onClick={handleExport} variant="outline" size="sm" className="hidden md:flex">
+              <Download className="mr-2 w-4 h-4" /> Export
+            </Button>
+            <div className="h-8 w-px bg-slate-200 mx-2" />
+            <Button onClick={() => { localStorage.removeItem('current_user'); navigate('/login'); }} variant="ghost" size="sm">Logout</Button>
           </div>
         </div>
+      </header>
 
+      <main className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-none shadow-sm">
-            <CardContent className="p-6">
-              <p className="text-sm text-slate-500 font-medium">Total Issues</p>
-              <h3 className="text-3xl font-bold">{stats.totalIssues}</h3>
-            </CardContent>
-          </Card>
-          <Card className="border-none shadow-sm">
-            <CardContent className="p-6">
-              <p className="text-sm text-slate-500 font-medium">Avg Resolution Time</p>
-              <h3 className="text-3xl font-bold">{stats.avgResolutionTimeHours}h</h3>
-            </CardContent>
-          </Card>
-          <Card className="border-none shadow-sm">
-            <CardContent className="p-6">
-              <p className="text-sm text-slate-500 font-medium">Pending</p>
-              <h3 className="text-3xl font-bold text-yellow-600">{stats.byStatus.Pending || 0}</h3>
-            </CardContent>
-          </Card>
-          <Card className="border-none shadow-sm">
-            <CardContent className="p-6">
-              <p className="text-sm text-slate-500 font-medium">Resolved</p>
-              <h3 className="text-3xl font-bold text-green-600">{stats.byStatus.Resolved || 0}</h3>
-            </CardContent>
-          </Card>
+          {[
+            { label: 'Total Issues', value: stats.totalIssues, color: 'text-slate-900' },
+            { label: 'Avg Resolution', value: `${stats.avgResolutionTimeHours}h`, color: 'text-blue-600' },
+            { label: 'Pending', value: stats.byStatus.Pending || 0, color: 'text-yellow-600' },
+            { label: 'Resolved', value: stats.byStatus.Resolved || 0, color: 'text-green-600' }
+          ].map((stat, i) => (
+            <Card key={i} className="border-none shadow-sm">
+              <CardContent className="p-6">
+                <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
+                <h3 className={`text-3xl font-bold ${stat.color}`}>{stat.value}</h3>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Tabs defaultValue="analytics" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="analytics">Analytics Dashboard</TabsTrigger>
             <TabsTrigger value="management">Issue Management</TabsTrigger>
+            <TabsTrigger value="departments">Departments</TabsTrigger>
           </TabsList>
 
           <TabsContent value="analytics" className="space-y-6">
@@ -146,48 +162,95 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="management">
+          <TabsContent value="management" className="space-y-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input 
+                placeholder="Search by ID or Title..." 
+                className="pl-10"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+
             <div className="space-y-4">
-              {issues.map(issue => (
+              {filteredIssues.map(issue => (
                 <Card key={issue.id} className="border-none shadow-sm">
-                  <CardContent className="p-6 flex flex-col md:flex-row justify-between gap-4">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-lg">{issue.title}</h3>
-                        <Badge className={issue.priority === 'High' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800'}>
-                          {issue.priority}
-                        </Badge>
-                        {issue.escalated && <AlertTriangle className="text-orange-500 w-5 h-5" />}
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row justify-between gap-6">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-lg">{issue.title}</h3>
+                          <Badge className={issue.priority === 'High' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800'}>
+                            {issue.priority}
+                          </Badge>
+                          {issue.escalated && <AlertTriangle className="text-orange-500 w-5 h-5" />}
+                        </div>
+                        <p className="text-slate-600 text-sm">{issue.description}</p>
+                        <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+                          <span>ID: {issue.id}</span>
+                          <span>Category: {issue.category}</span>
+                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {issue.location.address}</span>
+                        </div>
                       </div>
-                      <p className="text-slate-600 text-sm">{issue.description}</p>
-                      <div className="flex gap-4 text-xs text-slate-400">
-                        <span>ID: {issue.id}</span>
-                        <span>Category: {issue.category}</span>
-                        <span>Location: {issue.location.address}</span>
+                      
+                      <div className="flex flex-col gap-3 min-w-[200px]">
+                        <div className="flex items-center gap-2">
+                          <Badge className={issue.status === 'Resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                            {issue.status}
+                          </Badge>
+                          {issue.assignedTo && <Badge variant="outline">Assigned: {issue.assignedTo}</Badge>}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          {issue.status === 'Pending' && (
+                            <Button size="sm" className="flex-1" onClick={() => handleStatusUpdate(issue.id, 'In Progress')}>
+                              <Play className="mr-2 w-4 h-4" /> Start
+                            </Button>
+                          )}
+                          {issue.status === 'In Progress' && (
+                            <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(issue.id, 'Resolved')}>
+                              <CheckCircle className="mr-2 w-4 h-4" /> Resolve
+                            </Button>
+                          )}
+                          <select 
+                            className="text-xs border rounded px-2 bg-white"
+                            onChange={(e) => handleAssign(issue.id, e.target.value)}
+                            value={issue.assignedTo || ""}
+                          >
+                            <option value="" disabled>Assign Dept</option>
+                            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                          </select>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {issue.status === 'Pending' && (
-                        <Button size="sm" onClick={() => handleStatusUpdate(issue.id, 'In Progress')}>
-                          <Play className="mr-2 w-4 h-4" /> Start Work
-                        </Button>
-                      )}
-                      {issue.status === 'In Progress' && (
-                        <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(issue.id, 'Resolved')}>
-                          <CheckCircle className="mr-2 w-4 h-4" /> Resolve
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </TabsContent>
+
+          <TabsContent value="departments">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {DEPARTMENTS.map(dept => (
+                <Card key={dept} className="border-none shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Users className="w-5 h-5 text-primary" /> {dept}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-slate-500">
+                      {issues.filter(i => i.assignedTo === dept).length} Active Issues
+                    </p>
+                    <Button variant="link" className="px-0 text-xs">View Department Team</Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
         </Tabs>
-      </div>
+      </main>
     </div>
   );
 };

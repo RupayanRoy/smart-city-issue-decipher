@@ -12,10 +12,19 @@ export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Othe
 export type IssueStatus = 'Pending' | 'In Progress' | 'Resolved';
 export type IssuePriority = 'Low' | 'Medium' | 'High';
 
+export const DEPARTMENTS = [
+  'Public Works',
+  'Water & Sanitation',
+  'Electrical Grid',
+  'Waste Management',
+  'Urban Planning'
+];
+
 export interface StatusHistory {
   status: IssueStatus;
   timestamp: string;
   updatedBy: string;
+  note?: string;
 }
 
 export interface Location {
@@ -34,7 +43,7 @@ export interface Issue {
   status: IssueStatus;
   priority: IssuePriority;
   location: Location;
-  assignedTo?: string; // Admin ID or Department
+  assignedTo?: string; // Department name
   statusHistory: StatusHistory[];
   escalated: boolean;
   createdAt: string;
