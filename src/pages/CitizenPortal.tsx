@@ -14,6 +14,7 @@ import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bel
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import IssueMapOverview from '@/components/IssueMapOverview';
+import Footer from '@/components/Footer';
 
 const CitizenPortal = () => {
   const [user, setUser] = useState<any>(null);
@@ -128,7 +129,7 @@ const CitizenPortal = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -167,7 +168,7 @@ const CitizenPortal = () => {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 space-y-8">
+      <main className="max-w-6xl mx-auto p-6 space-y-8 flex-1">
         <div className="bg-emerald-900 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-emerald-200">
           <div className="relative z-10 space-y-4 max-w-2xl">
             <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 backdrop-blur-sm px-3 py-1">Community Impact</Badge>
@@ -403,6 +404,7 @@ const CitizenPortal = () => {
           </TabsContent>
         </Tabs>
       </main>
+      <Footer />
     </div>
   );
 };

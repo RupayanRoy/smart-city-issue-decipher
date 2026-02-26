@@ -14,6 +14,7 @@ import { showSuccess } from '@/utils/toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon, ImageIcon, Activity, BarChart3, LayoutDashboard } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
+import Footer from '@/components/Footer';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -65,7 +66,7 @@ const AdminDashboard = () => {
   const pieData = Object.entries(stats.byCategory).map(([name, value]) => ({ name, value }));
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9]">
+    <div className="min-h-screen flex flex-col bg-[#F1F5F9]">
       <header className="bg-slate-900 text-white sticky top-0 z-50 shadow-2xl">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -87,7 +88,7 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-8 space-y-8">
+      <main className="max-w-7xl mx-auto p-8 space-y-8 flex-1">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[
             { label: 'Active Reports', value: stats.totalIssues, icon: Activity, color: 'text-slate-900', bg: 'bg-white' },
@@ -277,6 +278,7 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </main>
+      <Footer />
     </div>
   );
 };
