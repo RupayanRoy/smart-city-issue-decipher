@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { showSuccess, showError } from '@/utils/toast';
-import { Shield, User as UserIcon } from 'lucide-react';
+import { Shield, User as UserIcon, Info } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -46,7 +46,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 space-y-6">
       <Card className="w-full max-w-md shadow-xl border-none">
         <CardHeader className="text-center space-y-1">
           <div className="mx-auto bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-2">
@@ -99,6 +99,25 @@ const Login = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      <div className="w-full max-w-md bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-3">
+        <div className="flex items-center gap-2 text-blue-700 font-semibold text-sm">
+          <Info className="w-4 h-4" />
+          Demo Credentials
+        </div>
+        <div className="grid grid-cols-2 gap-4 text-xs">
+          <div className="space-y-1">
+            <p className="font-bold text-slate-700">Admin Access:</p>
+            <p className="text-slate-600">Email: <span className="font-mono">admin@smartcity.gov</span></p>
+            <p className="text-slate-600">Pass: <span className="font-mono">password123</span></p>
+          </div>
+          <div className="space-y-1">
+            <p className="font-bold text-slate-700">Citizen Access:</p>
+            <p className="text-slate-600">Email: <span className="font-mono">arun@example.com</span></p>
+            <p className="text-slate-600">Pass: <span className="font-mono">password123</span></p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
