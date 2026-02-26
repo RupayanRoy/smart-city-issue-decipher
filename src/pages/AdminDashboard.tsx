@@ -12,7 +12,8 @@ import { escalationService } from '@/backend/services/escalationService';
 import { DEPARTMENTS } from '@/backend/types';
 import { showSuccess } from '@/utils/toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users } from 'lucide-react';
+import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon } from 'lucide-react';
+import IssueMapOverview from '@/components/IssueMapOverview';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -67,8 +68,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
+      <header className="bg-white border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-primary p-1.5 rounded-lg">
@@ -90,7 +90,6 @@ const AdminDashboard = () => {
       </header>
 
       <main className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[
             { label: 'Total Issues', value: stats.totalIssues, color: 'text-slate-900' },
@@ -110,6 +109,7 @@ const AdminDashboard = () => {
         <Tabs defaultValue="analytics" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="analytics">Analytics Dashboard</TabsTrigger>
+            <TabsTrigger value="map">Geospatial Overview</TabsTrigger>
             <TabsTrigger value="management">Issue Management</TabsTrigger>
             <TabsTrigger value="departments">Departments</TabsTrigger>
           </TabsList>
@@ -158,6 +158,20 @@ const AdminDashboard = () => {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="map" className="space-y-4">
+            <Card className="border-none shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapIcon className="w-5 h-5 text-primary" /> City-wide Issue Map
+                </CardTitle>
+                <CardDescription>Visual distribution of all reported issues across the city.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <IssueMapOverview issues={issues} />
               </CardContent>
             </Card>
           </TabsContent>

@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { showSuccess } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, Filter, User as UserIcon, Bell } from 'lucide-react';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import LocationPicker from '@/components/LocationPicker';
 
 const CitizenPortal = () => {
   const [user, setUser] = useState<any>(null);
@@ -71,8 +72,7 @@ const CitizenPortal = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
+      <header className="bg-white border-b sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center">
@@ -136,23 +136,36 @@ const CitizenPortal = () => {
               <Card className="border-none shadow-lg animate-in fade-in slide-in-from-top-4">
                 <CardHeader>
                   <CardTitle>Report New Issue</CardTitle>
-                  <CardDescription>AI will automatically categorize and prioritize your report based on the description.</CardDescription>
+                  <CardDescription>Pin the exact location on the map and provide details.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Issue Title</Label>
-                      <Input required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Large pothole on Main St" />
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Issue Title</Label>
+                          <Input required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Large pothole on Main St" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Description</Label>
+                          <Textarea required className="min-h-[120px]" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the issue in detail..." />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Location Address</Label>
+                          <Input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="123 Main St, Downtown" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Pin Location on Map</Label>
+                        <LocationPicker 
+                          lat={formData.lat} 
+                          lng={formData.lng} 
+                          onChange={(lat, lng) => setFormData({...formData, lat, lng})} 
+                        />
+                        <p className="text-xs text-slate-400">Coordinates: {formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}</p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Description</Label>
-                      <Textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the issue in detail..." />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Location Address</Label>
-                      <Input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="123 Main St, Downtown" />
-                    </div>
-                    <Button type="submit" className="w-full">Submit Report</Button>
+                    <Button type="submit" className="w-full py-6 text-lg">Submit Report</Button>
                   </form>
                 </CardContent>
               </Card>
@@ -189,11 +202,6 @@ const CitizenPortal = () => {
                           <AlertCircle className={`w-4 h-4 ${issue.priority === 'High' ? 'text-red-500' : 'text-slate-400'}`} /> 
                           Priority: {issue.priority}
                         </div>
-                        {issue.assignedTo && (
-                          <div className="flex items-center gap-1">
-                            <UserIcon className="w-4 h-4" /> Dept: {issue.assignedTo}
-                          </div>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
