@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
-import { showSuccess } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon } from 'lucide-react';
+import { showSuccess, showError } from '@/utils/toast';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import IssueMapOverview from '@/components/IssueMapOverview';
@@ -22,6 +22,8 @@ const CitizenPortal = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showForm, setShowForm] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -41,8 +43,45 @@ const CitizenPortal = () => {
 
   const refreshData = (userId: string) => {
     setMyIssues(mockDb.issues.filter(i => i.citizenId === userId));
-    // Get issues within 5km of VIT Chennai
     setNearbyIssues(issueService.getIssuesByRadius(12.8406, 80.1534, 5));
+  };
+
+  // Reverse Geocoding: Lat/Lng -> Address
+  const handleMapChange = async (lat: number, lng: number) => {
+    setFormData(prev => ({ ...prev, lat, lng }));
+    setIsGeocoding(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+      const data = await response.json();
+      if (data && data.display_name) {
+        setFormData(prev => ({ ...prev, address: data.display_name }));
+      }
+    } catch (error) {
+      console.error("Reverse geocoding failed", error);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  // Geocoding: Address -> Lat/Lng
+  const handleAddressSearch = async () => {
+    if (!formData.address.trim()) return;
+    setIsGeocoding(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}`);
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        setFormData(prev => ({ ...prev, lat: parseFloat(lat), lng: parseFloat(lon) }));
+        showSuccess("Location found on map!");
+      } else {
+        showError("Could not find that address on the map.");
+      }
+    } catch (error) {
+      showError("Error searching for address.");
+    } finally {
+      setIsGeocoding(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -141,7 +180,7 @@ const CitizenPortal = () => {
               <Card className="border-none shadow-lg animate-in fade-in slide-in-from-top-4">
                 <CardHeader>
                   <CardTitle>Report New Issue</CardTitle>
-                  <CardDescription>Pin the exact location on the map and provide details.</CardDescription>
+                  <CardDescription>Pin the exact location on the map or type an address.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-6">
@@ -157,15 +196,35 @@ const CitizenPortal = () => {
                         </div>
                         <div className="space-y-2">
                           <Label>Location Address</Label>
-                          <Input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="123 Main St, Downtown" />
+                          <div className="flex gap-2">
+                            <Input 
+                              required 
+                              value={formData.address} 
+                              onChange={e => setFormData({...formData, address: e.target.value})} 
+                              placeholder="123 Main St, Downtown" 
+                              className="flex-1"
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={handleAddressSearch}
+                              disabled={isGeocoding}
+                            >
+                              {isGeocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : "Find on Map"}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label>Pin Location on Map</Label>
+                        <Label className="flex items-center justify-between">
+                          Pin Location on Map
+                          {isGeocoding && <span className="text-[10px] text-primary animate-pulse">Updating address...</span>}
+                        </Label>
                         <LocationPicker 
                           lat={formData.lat} 
                           lng={formData.lng} 
-                          onChange={(lat, lng) => setFormData({...formData, lat, lng})} 
+                          onChange={handleMapChange} 
                         />
                         <p className="text-xs text-slate-400">Coordinates: {formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}</p>
                       </div>
