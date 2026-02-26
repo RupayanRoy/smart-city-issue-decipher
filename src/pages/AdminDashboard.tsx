@@ -12,7 +12,7 @@ import { escalationService } from '@/backend/services/escalationService';
 import { DEPARTMENTS } from '@/backend/types';
 import { showSuccess } from '@/utils/toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon, ImageIcon, Activity, BarChart3, LayoutDashboard, Clock, Heart, Flag, Check, X } from 'lucide-react';
+import { Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, Search, Download, Users, Map as MapIcon, ImageIcon, Activity, BarChart3, LayoutDashboard, Clock, Heart, Flag, Check, X, Megaphone } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 import Footer from '@/components/Footer';
 
@@ -59,6 +59,18 @@ const AdminDashboard = () => {
   const handleAssign = (id: string, dept: string) => {
     issueService.assignIssue(id, dept);
     showSuccess(`Assigned to ${dept}`);
+    refreshData();
+  };
+
+  const handleRaiseAlert = (id: string) => {
+    issueService.raiseSevereAlert(id);
+    showSuccess("Severe Alert raised! All citizens will be notified.");
+    refreshData();
+  };
+
+  const handleDismissAlert = (id: string) => {
+    issueService.dismissSevereAlert(id);
+    showSuccess("Severe Alert dismissed.");
     refreshData();
   };
 
@@ -179,6 +191,7 @@ const AdminDashboard = () => {
                                   {issue.priority} Priority
                                 </Badge>
                                 {issue.escalated && <Badge className="bg-orange-100 text-orange-700 rounded-lg px-3 py-1 font-black text-[10px] uppercase tracking-widest flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Escalated</Badge>}
+                                {issue.isSevereAlert && <Badge className="bg-red-600 text-white rounded-lg px-3 py-1 font-black text-[10px] uppercase tracking-widest flex items-center gap-1 animate-pulse"><Megaphone className="w-3 h-3" /> Severe Alert Active</Badge>}
                               </div>
                               <p className="text-slate-500 font-medium leading-relaxed text-lg">{issue.description}</p>
                               <div className="flex flex-wrap gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -207,6 +220,19 @@ const AdminDashboard = () => {
                                     <CheckCircle className="mr-2 w-4 h-4" /> Mark Resolved
                                   </Button>
                                 )}
+                                
+                                {issue.status !== 'Resolved' && issue.status !== 'Flagged' && (
+                                  issue.isSevereAlert ? (
+                                    <Button variant="outline" className="w-full rounded-xl h-12 font-black border-2 border-red-200 text-red-600 hover:bg-red-50" onClick={() => handleDismissAlert(issue.id)}>
+                                      <X className="mr-2 w-4 h-4" /> Dismiss Alert
+                                    </Button>
+                                  ) : (
+                                    <Button className="w-full rounded-xl h-12 font-black bg-red-600 hover:bg-red-700 shadow-lg shadow-red-100" onClick={() => handleRaiseAlert(issue.id)}>
+                                      <Megaphone className="mr-2 w-4 h-4" /> Raise Severe Alert
+                                    </Button>
+                                  )
+                                )}
+
                                 <div className="space-y-1.5">
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assign Department</p>
                                   <select className="w-full h-12 rounded-xl border-slate-200 bg-white text-sm font-bold px-4 outline-none focus:ring-2 focus:ring-emerald-500" onChange={(e) => handleAssign(issue.id, e.target.value)} value={issue.assignedTo || ""}>

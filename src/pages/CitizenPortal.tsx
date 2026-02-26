@@ -11,7 +11,7 @@ import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { aiService } from '@/backend/services/aiService';
 import { showSuccess, showError } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping, ThumbsUp, MessageSquare, Send, Flag, Trash2, Video, Bot, CheckCircle2, FileText } from 'lucide-react';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping, ThumbsUp, MessageSquare, Send, Flag, Trash2, Video, Bot, CheckCircle2, FileText, Megaphone, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import IssueMapOverview from '@/components/IssueMapOverview';
@@ -27,6 +27,7 @@ const CitizenPortal = () => {
   const [showManualForm, setShowManualForm] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [commentText, setCommentText] = useState<Record<string, string>>({});
+  const [activeAlert, setActiveAlert] = useState<any>(null);
   
   // Manual Form State
   const [manualData, setManualData] = useState({
@@ -62,6 +63,18 @@ const CitizenPortal = () => {
     setUser(dbUser || parsedUser);
     refreshData(parsedUser.id);
     checkNotifications(parsedUser.id);
+
+    // Poll for severe alerts
+    const alertInterval = setInterval(() => {
+      const severeIssue = mockDb.issues.find(i => i.isSevereAlert && i.status !== 'Resolved');
+      if (severeIssue) {
+        setActiveAlert(severeIssue);
+      } else {
+        setActiveAlert(null);
+      }
+    }, 3000);
+
+    return () => clearInterval(alertInterval);
   }, []);
 
   useEffect(() => {
@@ -242,6 +255,36 @@ const CitizenPortal = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+      {/* Severe Alert Popup */}
+      {activeAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <Card className="w-full max-w-lg border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white border-t-8 border-red-600">
+            <CardHeader className="bg-red-50 p-8 flex flex-row items-center gap-4">
+              <div className="bg-red-600 p-3 rounded-2xl shadow-lg shadow-red-200 animate-bounce">
+                <Megaphone className="text-white w-8 h-8" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-black text-red-700">SEVERE COMMUNITY ALERT</CardTitle>
+                <CardDescription className="text-red-600 font-bold uppercase tracking-widest text-[10px]">Immediate Attention Required</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-slate-900">{activeAlert.title}</h3>
+                <p className="text-slate-600 font-medium leading-relaxed">{activeAlert.description}</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl flex items-center gap-3">
+                <MapPin className="text-red-600 w-5 h-5" />
+                <span className="text-sm font-bold text-slate-700">{activeAlert.location.address}</span>
+              </div>
+              <Button onClick={() => setActiveAlert(null)} className="w-full py-8 text-lg font-black bg-slate-900 hover:bg-slate-800 rounded-2xl shadow-xl transition-all">
+                I Understand & Will Stay Safe
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -469,6 +512,7 @@ const CitizenPortal = () => {
                                 <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold rounded-lg">{issue.category}</Badge>
                                 {issue.priority === 'High' && <Badge className="bg-red-100 text-red-700 border-red-200">High Priority</Badge>}
                                 {issue.videoUrl && <Badge className="bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1"><Video className="w-3 h-3" /> Video</Badge>}
+                                {issue.isSevereAlert && <Badge className="bg-red-600 text-white flex items-center gap-1 animate-pulse"><Megaphone className="w-3 h-3" /> Severe Alert</Badge>}
                               </div>
                               <h3 className="font-black text-xl text-slate-900 leading-tight">{issue.title}</h3>
                             </div>

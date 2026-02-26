@@ -59,6 +59,7 @@ export interface Issue {
   reports: string[];
   comments: Comment[];
   escalated: boolean;
+  isSevereAlert?: boolean;
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;

@@ -106,6 +106,7 @@ export const issueService = {
     
     if (status === 'Resolved') {
       issue.resolvedAt = new Date().toISOString();
+      issue.isSevereAlert = false; // Clear alert on resolution
       const citizen = mockDb.users.find(u => u.id === issue.citizenId);
       if (citizen) {
         citizen.points = (citizen.points || 0) + 10;
@@ -118,6 +119,23 @@ export const issueService = {
       updatedBy: adminId
     });
 
+    mockDb.save();
+    return issue;
+  },
+
+  raiseSevereAlert: (issueId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+    issue.isSevereAlert = true;
+    issue.priority = 'High';
+    mockDb.save();
+    return issue;
+  },
+
+  dismissSevereAlert: (issueId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+    issue.isSevereAlert = false;
     mockDb.save();
     return issue;
   },
