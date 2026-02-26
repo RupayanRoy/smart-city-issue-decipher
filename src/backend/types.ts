@@ -48,14 +48,15 @@ export interface Issue {
   title: string;
   description: string;
   imageUrl?: string;
+  videoUrl?: string;
   category: IssueCategory;
   status: IssueStatus;
   priority: IssuePriority;
   location: Location;
   assignedTo?: string;
   statusHistory: StatusHistory[];
-  upvotes: string[]; // Array of User IDs
-  reports: string[]; // Array of User IDs who reported this
+  upvotes: string[];
+  reports: string[];
   comments: Comment[];
   escalated: boolean;
   createdAt: string;

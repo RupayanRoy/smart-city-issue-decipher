@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
+import { aiService } from '@/backend/services/aiService';
 import { showSuccess, showError } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping, ThumbsUp, MessageSquare, Send, Flag, Trash2 } from 'lucide-react';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping, ThumbsUp, MessageSquare, Send, Flag, Trash2, Video, Bot, CheckCircle2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
 import IssueMapOverview from '@/components/IssueMapOverview';
@@ -22,31 +23,39 @@ const CitizenPortal = () => {
   const [nearbyIssues, setNearbyIssues] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [showForm, setShowForm] = useState(false);
+  const [showAIAgent, setShowAIAgent] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   
-  const [formData, setFormData] = useState({
-    title: '',
+  // AI Agent State
+  const [aiStep, setAiStep] = useState<'initial' | 'location' | 'confirm'>('initial');
+  const [aiMessages, setAiMessages] = useState<{role: 'bot' | 'user', text: string}[]>([]);
+  const [aiInput, setAiInput] = useState('');
+  const [aiData, setAiData] = useState({
     description: '',
     address: '',
     lat: 12.8406,
     lng: 80.1534,
-    imageUrl: ''
+    imageUrl: '',
+    videoUrl: ''
   });
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const storedUser = localStorage.getItem('current_user');
     if (!storedUser) return navigate('/login');
     const parsedUser = JSON.parse(storedUser);
-    
     const dbUser = mockDb.users.find(u => u.id === parsedUser.id);
     setUser(dbUser || parsedUser);
-    
     refreshData(parsedUser.id);
     checkNotifications(parsedUser.id);
   }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [aiMessages]);
 
   const checkNotifications = (userId: string) => {
     const resolvedUnnotified = mockDb.issues.filter(i => i.citizenId === userId && i.status === 'Resolved' && !i.notified);
@@ -60,7 +69,6 @@ const CitizenPortal = () => {
     setMyIssues(mockDb.issues.filter(i => i.citizenId === userId));
     const nearby = issueService.getIssuesByRadius(12.8406, 80.1534, 5);
     setNearbyIssues(nearby.sort((a, b) => (b.upvotes?.length || 0) - (a.upvotes?.length || 0)));
-    
     const dbUser = mockDb.users.find(u => u.id === userId);
     if (dbUser) setUser(dbUser);
   };
@@ -79,7 +87,6 @@ const CitizenPortal = () => {
   const handleAddComment = (issueId: string) => {
     const text = commentText[issueId];
     if (!text?.trim()) return;
-    
     issueService.addComment(issueId, user.id, user.name, text);
     setCommentText(prev => ({ ...prev, [issueId]: '' }));
     refreshData(user.id);
@@ -92,62 +99,80 @@ const CitizenPortal = () => {
     showSuccess("Comment deleted.");
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // AI Agent Logic
+  const startAIAgent = () => {
+    setShowAIAgent(true);
+    setAiMessages([{ role: 'bot', text: "Hello! I'm your CityCare AI Assistant. Describe the issue you're seeing, and feel free to upload a photo or video." }]);
+    setAiStep('initial');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, imageUrl: reader.result as string }));
+        setAiData(prev => ({ ...prev, [type === 'image' ? 'imageUrl' : 'videoUrl']: reader.result as string }));
+        setAiMessages(prev => [...prev, { role: 'user', text: `Uploaded a ${type}.` }]);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleMapChange = async (lat: number, lng: number) => {
-    setFormData(prev => ({ ...prev, lat, lng }));
-    setIsGeocoding(true);
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-      const data = await response.json();
-      if (data && data.display_name) {
-        setFormData(prev => ({ ...prev, address: data.display_name }));
+  const handleAISubmit = async () => {
+    if (!aiInput.trim() && aiStep !== 'confirm') return;
+
+    const userMsg = aiInput;
+    setAiMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setAiInput('');
+
+    if (aiStep === 'initial') {
+      const analysis = aiService.analyzeIssue(userMsg);
+      setAiData(prev => ({ ...prev, description: userMsg }));
+      
+      setTimeout(() => {
+        const botResponse = aiService.generateResponse(analysis);
+        setAiMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
+        if (!analysis.hasLocation) {
+          setAiStep('location');
+        } else {
+          setAiStep('confirm');
+        }
+      }, 1000);
+    } else if (aiStep === 'location') {
+      setIsGeocoding(true);
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(userMsg)}`);
+        const data = await response.json();
+        if (data && data.length > 0) {
+          const { lat, lon, display_name } = data[0];
+          setAiData(prev => ({ ...prev, address: display_name, lat: parseFloat(lat), lng: parseFloat(lon) }));
+          setAiMessages(prev => [...prev, { role: 'bot', text: `I've found the location: ${display_name}. Does everything look correct? I'm ready to submit.` }]);
+          setAiStep('confirm');
+        } else {
+          setAiMessages(prev => [...prev, { role: 'bot', text: "I couldn't find that location. Could you try being more specific or give me a nearby landmark?" }]);
+        }
+      } catch (e) {
+        setAiMessages(prev => [...prev, { role: 'bot', text: "Sorry, I had trouble searching for that location. Please try again." }]);
+      } finally {
+        setIsGeocoding(false);
       }
-    } catch (error) {} finally { setIsGeocoding(false); }
+    }
   };
 
-  const handleAddressSearch = async () => {
-    if (!formData.address.trim()) return;
-    setIsGeocoding(true);
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}`);
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0];
-        setFormData(prev => ({ ...prev, lat: parseFloat(lat), lng: parseFloat(lon) }));
-        showSuccess("Location pinned!");
-      }
-    } catch (error) {} finally { setIsGeocoding(false); }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const finalizeReport = () => {
     issueService.createIssue(user.id, {
-      title: formData.title,
-      description: formData.description,
-      imageUrl: formData.imageUrl,
-      location: { address: formData.address, lat: formData.lat, lng: formData.lng }
+      title: '', // AI will generate
+      description: aiData.description,
+      imageUrl: aiData.imageUrl,
+      videoUrl: aiData.videoUrl,
+      location: { address: aiData.address, lat: aiData.lat, lng: aiData.lng }
     });
     refreshData(user.id);
-    setShowForm(false);
-    setFormData({ title: '', description: '', address: '', lat: 12.8406, lng: 80.1534, imageUrl: '' });
-    showSuccess('Thank you for your contribution! Our team is on it.');
+    setShowAIAgent(false);
+    setAiMessages([]);
+    setAiData({ description: '', address: '', lat: 12.8406, lng: 80.1534, imageUrl: '', videoUrl: '' });
+    showSuccess('Report filed automatically! Thank you for being a hero.');
   };
-
-  const filteredMyIssues = myIssues.filter(issue => {
-    const matchesSearch = issue.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || issue.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -202,85 +227,89 @@ const CitizenPortal = () => {
       <main className="max-w-6xl mx-auto p-6 space-y-8 flex-1">
         <div className="bg-emerald-900 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-emerald-200">
           <div className="relative z-10 space-y-4 max-w-2xl">
-            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 backdrop-blur-sm px-3 py-1">Community Impact</Badge>
-            <h2 className="text-4xl font-black leading-tight">Your voice shapes our city's future.</h2>
-            <p className="text-emerald-100/80 text-lg font-medium">Report issues, track progress, and earn rewards for making your neighborhood a better place to live.</p>
-            <Button onClick={() => setShowForm(!showForm)} size="lg" className="bg-white text-emerald-900 hover:bg-emerald-50 rounded-2xl font-bold px-8 h-14 shadow-xl shadow-emerald-950/20">
-              {showForm ? 'Close Form' : <><Plus className="mr-2 w-5 h-5" /> Report an Issue</>}
+            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 backdrop-blur-sm px-3 py-1">Agentic AI Reporting</Badge>
+            <h2 className="text-4xl font-black leading-tight">Report issues with AI ease.</h2>
+            <p className="text-emerald-100/80 text-lg font-medium">Just talk to our AI agent. Upload photos or videos, and let the AI handle the paperwork for you.</p>
+            <Button onClick={startAIAgent} size="lg" className="bg-white text-emerald-900 hover:bg-emerald-50 rounded-2xl font-bold px-8 h-14 shadow-xl shadow-emerald-950/20">
+              <Bot className="mr-2 w-5 h-5" /> Start AI Assistant
             </Button>
           </div>
           <Sparkles className="absolute top-10 right-10 w-32 h-32 text-emerald-800/50 -rotate-12" />
           <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-emerald-800/30 rounded-full blur-3xl" />
         </div>
 
-        {showForm && (
-          <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-[2rem] overflow-hidden animate-in fade-in slide-in-from-top-8 duration-500">
-            <CardHeader className="bg-slate-50 p-8 border-b border-slate-100">
-              <CardTitle className="text-2xl font-black text-slate-900">New Community Report</CardTitle>
-              <CardDescription className="text-slate-500 font-medium">Help us identify what needs attention in your area.</CardDescription>
+        {showAIAgent && (
+          <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-[2rem] overflow-hidden flex flex-col h-[600px] bg-white animate-in fade-in slide-in-from-bottom-8 duration-500">
+            <CardHeader className="bg-slate-900 text-white p-6 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-emerald-500 p-2 rounded-xl">
+                  <Bot className="w-6 h-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-black">CityCare AI Agent</CardTitle>
+                  <CardDescription className="text-slate-400 text-xs">Online & Ready to help</CardDescription>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white" onClick={() => setShowAIAgent(false)}>
+                <X className="w-6 h-6" />
+              </Button>
             </CardHeader>
-            <CardContent className="p-8">
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <Label className="text-slate-700 font-bold ml-1">What's the issue?</Label>
-                      <Input required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Broken street light on Oak Avenue" className="rounded-2xl h-14 border-slate-200 focus:ring-emerald-500" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-700 font-bold ml-1">Tell us more</Label>
-                      <Textarea required className="min-h-[120px] rounded-2xl border-slate-200 focus:ring-emerald-500 p-4" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Provide as much detail as possible..." />
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label className="text-slate-700 font-bold ml-1">Visual Evidence</Label>
-                      <div className="flex items-center gap-6">
-                        {formData.imageUrl ? (
-                          <div className="relative w-32 h-32 rounded-2xl overflow-hidden border-4 border-white shadow-lg">
-                            <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                            <button type="button" onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-lg"><X className="w-4 h-4" /></button>
-                          </div>
-                        ) : (
-                          <label className="w-32 h-32 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-all group">
-                            <Camera className="w-8 h-8 text-slate-400 group-hover:text-emerald-500 transition-colors" />
-                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-2 group-hover:text-emerald-600">Add Photo</span>
-                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                          </label>
-                        )}
-                        <div className="flex-1 space-y-1">
-                          <p className="text-sm font-bold text-slate-700">Upload a photo</p>
-                          <p className="text-xs text-slate-400 leading-relaxed">Photos help our response teams understand the situation better and act faster.</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-slate-700 font-bold ml-1">Location</Label>
-                      <div className="flex gap-3">
-                        <Input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Street address or landmark" className="flex-1 rounded-2xl h-14 border-slate-200" />
-                        <Button type="button" variant="outline" className="rounded-2xl h-14 px-6 border-2 font-bold" onClick={handleAddressSearch} disabled={isGeocoding}>
-                          {isGeocoding ? <Loader2 className="w-5 h-5 animate-spin" /> : "Find"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <Label className="text-slate-700 font-bold ml-1 flex items-center justify-between">
-                      Pin on Map
-                      {isGeocoding && <span className="text-[10px] text-emerald-600 font-black uppercase animate-pulse">Locating...</span>}
-                    </Label>
-                    <div className="rounded-[2rem] overflow-hidden border-4 border-white shadow-xl">
-                      <LocationPicker lat={formData.lat} lng={formData.lng} onChange={handleMapChange} />
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-3">
-                      <MapPin className="w-5 h-5 text-emerald-600" />
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Coordinates: {formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}</p>
-                    </div>
+            <CardContent className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+              {aiMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'bot' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[80%] p-4 rounded-2xl text-sm font-medium shadow-sm ${msg.role === 'bot' ? 'bg-white text-slate-800 rounded-tl-none' : 'bg-emerald-600 text-white rounded-tr-none'}`}>
+                    {msg.text}
                   </div>
                 </div>
-                <Button type="submit" className="w-full py-8 text-xl font-black bg-emerald-600 hover:bg-emerald-700 rounded-2xl shadow-xl shadow-emerald-100 transition-all transform hover:-translate-y-1">Submit Community Report</Button>
-              </form>
+              ))}
+              {aiStep === 'confirm' && (
+                <div className="flex justify-start">
+                  <div className="bg-white p-6 rounded-2xl shadow-md border border-emerald-100 space-y-4 max-w-[90%]">
+                    <p className="font-black text-slate-900 flex items-center gap-2"><CheckCircle2 className="text-emerald-500 w-5 h-5" /> Summary of Report</p>
+                    <div className="space-y-2 text-xs text-slate-600">
+                      <p><span className="font-bold text-slate-900">Issue:</span> {aiData.description}</p>
+                      <p><span className="font-bold text-slate-900">Venue:</span> {aiData.address}</p>
+                      <div className="flex gap-2 mt-2">
+                        {aiData.imageUrl && <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden border"><img src={aiData.imageUrl} className="w-full h-full object-cover" /></div>}
+                        {aiData.videoUrl && <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center border"><Video className="w-6 h-6 text-slate-400" /></div>}
+                      </div>
+                    </div>
+                    <Button onClick={finalizeReport} className="w-full bg-emerald-600 hover:bg-emerald-700 font-black rounded-xl">Confirm & File Report</Button>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
             </CardContent>
+            <div className="p-6 bg-white border-t border-slate-100 space-y-4">
+              <div className="flex items-center gap-3">
+                <label className="cursor-pointer p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500 hover:text-emerald-600">
+                  <Camera className="w-6 h-6" />
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'image')} />
+                </label>
+                <label className="cursor-pointer p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500 hover:text-emerald-600">
+                  <Video className="w-6 h-6" />
+                  <input type="file" accept="video/*" className="hidden" onChange={(e) => handleFileUpload(e, 'video')} />
+                </label>
+                <div className="flex-1 relative">
+                  <Input 
+                    placeholder={aiStep === 'location' ? "Type the venue/address..." : "Describe the issue..."} 
+                    className="rounded-2xl h-12 border-slate-200 pr-12" 
+                    value={aiInput}
+                    onChange={e => setAiInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAISubmit()}
+                    disabled={aiStep === 'confirm'}
+                  />
+                  <Button 
+                    size="icon" 
+                    className="absolute right-1 top-1 h-10 w-10 rounded-xl bg-slate-900"
+                    onClick={handleAISubmit}
+                    disabled={aiStep === 'confirm'}
+                  >
+                    {isGeocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </Card>
         )}
 
@@ -316,6 +345,7 @@ const CitizenPortal = () => {
                               <div className="flex items-center gap-2">
                                 <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold rounded-lg">{issue.category}</Badge>
                                 {issue.priority === 'High' && <Badge className="bg-red-100 text-red-700 border-red-200">High Priority</Badge>}
+                                {issue.videoUrl && <Badge className="bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1"><Video className="w-3 h-3" /> Video</Badge>}
                               </div>
                               <h3 className="font-black text-xl text-slate-900 leading-tight">{issue.title}</h3>
                             </div>

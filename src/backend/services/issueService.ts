@@ -3,23 +3,24 @@ import { Issue, IssueCategory, IssuePriority, IssueStatus, Location, Comment } f
 import { aiService } from './aiService';
 
 export const issueService = {
-  createIssue: (citizenId: string, data: { title: string; description: string; imageUrl?: string; location: Location }) => {
-    const { category: aiCategory, priority: aiPriority } = aiService.detectCategoryAndPriority(data.description);
+  createIssue: (citizenId: string, data: { title: string; description: string; imageUrl?: string; videoUrl?: string; location: Location }) => {
+    const analysis = aiService.analyzeIssue(data.description);
     
     const newIssue: Issue = {
       id: Math.random().toString(36).substr(2, 9),
       citizenId,
-      title: data.title,
+      title: data.title || analysis.suggestedTitle,
       description: data.description,
       imageUrl: data.imageUrl,
-      category: aiCategory,
+      videoUrl: data.videoUrl,
+      category: analysis.category,
       status: 'Pending',
-      priority: aiPriority,
+      priority: analysis.priority,
       location: data.location,
       statusHistory: [{
         status: 'Pending',
         timestamp: new Date().toISOString(),
-        updatedBy: 'System'
+        updatedBy: 'CityCare AI'
       }],
       upvotes: [],
       reports: [],
@@ -125,13 +126,11 @@ export const issueService = {
     const issue = mockDb.issues.find(i => i.id === issueId);
     if (!issue) return;
 
-    // Penalize the creator
     const creator = mockDb.users.find(u => u.id === issue.citizenId);
     if (creator) {
       creator.points = Math.max(0, (creator.points || 0) - 1);
     }
 
-    // Mark as flagged/invalid
     issue.status = 'Flagged';
     issue.statusHistory.push({
       status: 'Flagged',
