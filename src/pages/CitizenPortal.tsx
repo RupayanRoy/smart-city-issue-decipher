@@ -10,13 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { showSuccess } from '@/utils/toast';
-import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell } from 'lucide-react';
+import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LocationPicker from '@/components/LocationPicker';
+import IssueMapOverview from '@/components/IssueMapOverview';
 
 const CitizenPortal = () => {
   const [user, setUser] = useState<any>(null);
-  const [issues, setIssues] = useState<any[]>([]);
+  const [myIssues, setMyIssues] = useState<any[]>([]);
+  const [nearbyIssues, setNearbyIssues] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showForm, setShowForm] = useState(false);
@@ -34,27 +36,29 @@ const CitizenPortal = () => {
     if (!storedUser) return navigate('/login');
     const parsedUser = JSON.parse(storedUser);
     setUser(parsedUser);
-    refreshIssues(parsedUser.id);
+    refreshData(parsedUser.id);
   }, []);
 
-  const refreshIssues = (userId: string) => {
-    setIssues(mockDb.issues.filter(i => i.citizenId === userId));
+  const refreshData = (userId: string) => {
+    setMyIssues(mockDb.issues.filter(i => i.citizenId === userId));
+    // Get issues within 5km of VIT Chennai
+    setNearbyIssues(issueService.getIssuesByRadius(12.8406, 80.1534, 5));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newIssue = issueService.createIssue(user.id, {
+    issueService.createIssue(user.id, {
       title: formData.title,
       description: formData.description,
       location: { address: formData.address, lat: formData.lat, lng: formData.lng }
     });
-    refreshIssues(user.id);
+    refreshData(user.id);
     setShowForm(false);
     setFormData({ title: '', description: '', address: '', lat: 12.8406, lng: 80.1534 });
     showSuccess('Issue reported successfully! AI has categorized your request.');
   };
 
-  const filteredIssues = issues.filter(issue => {
+  const filteredMyIssues = myIssues.filter(issue => {
     const matchesSearch = issue.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          issue.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || issue.status === statusFilter;
@@ -100,6 +104,7 @@ const CitizenPortal = () => {
         <Tabs defaultValue="issues" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="issues">My Issues</TabsTrigger>
+            <TabsTrigger value="nearby">Nearby Issues</TabsTrigger>
             <TabsTrigger value="activity">Recent Activity</TabsTrigger>
             <TabsTrigger value="profile">My Profile</TabsTrigger>
           </TabsList>
@@ -172,12 +177,12 @@ const CitizenPortal = () => {
             )}
 
             <div className="grid gap-4">
-              {filteredIssues.length === 0 ? (
+              {filteredMyIssues.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-slate-200">
                   <p className="text-slate-400">No issues found matching your criteria.</p>
                 </div>
               ) : (
-                filteredIssues.map(issue => (
+                filteredMyIssues.map(issue => (
                   <Card key={issue.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start mb-4">
@@ -210,12 +215,52 @@ const CitizenPortal = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="nearby" className="space-y-6">
+            <Card className="border-none shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapIcon className="w-5 h-5 text-primary" /> Issues Near You
+                </CardTitle>
+                <CardDescription>Showing issues within 5km of VIT Chennai.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <IssueMapOverview issues={nearbyIssues} />
+                
+                <div className="grid gap-4">
+                  <h3 className="font-bold text-lg">Recent Nearby Reports</h3>
+                  {nearbyIssues.length === 0 ? (
+                    <p className="text-slate-500 text-center py-10">No issues reported in this area yet.</p>
+                  ) : (
+                    nearbyIssues.slice(0, 5).map(issue => (
+                      <div key={issue.id} className="flex items-start gap-4 p-4 bg-white rounded-lg border border-slate-100 shadow-sm">
+                        <div className={`p-2 rounded-lg ${getStatusColor(issue.status)}`}>
+                          <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-bold">{issue.title}</h4>
+                            <Badge variant="outline" className="text-[10px]">{issue.status}</Badge>
+                          </div>
+                          <p className="text-sm text-slate-500 line-clamp-1">{issue.description}</p>
+                          <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400">
+                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {issue.location.address}</span>
+                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {format(parseISO(issue.createdAt), 'MMM d')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="activity">
             <Card className="border-none shadow-sm">
               <CardHeader><CardTitle>Recent Updates</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {issues.flatMap(i => i.statusHistory.map((h: any) => ({ ...h, issueTitle: i.title }))).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((activity, idx) => (
+                  {myIssues.flatMap(i => i.statusHistory.map((h: any) => ({ ...h, issueTitle: i.title }))).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((activity, idx) => (
                     <div key={idx} className="flex gap-4">
                       <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
                       <div>
