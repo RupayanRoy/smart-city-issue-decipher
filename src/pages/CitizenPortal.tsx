@@ -184,6 +184,12 @@ const CitizenPortal = () => {
     }
   };
 
+  const filteredMyIssues = myIssues.filter(issue => {
+    const matchesSearch = issue.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || issue.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50">
