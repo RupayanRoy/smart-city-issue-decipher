@@ -28,6 +28,7 @@ const CitizenPortal = () => {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [activeAlert, setActiveAlert] = useState<any>(null);
+  const dismissedAlertIds = useRef<Set<string>>(new Set());
   
   // Manual Form State
   const [manualData, setManualData] = useState({
@@ -68,7 +69,10 @@ const CitizenPortal = () => {
     const alertInterval = setInterval(() => {
       const severeIssue = mockDb.issues.find(i => i.isSevereAlert && i.status !== 'Resolved');
       if (severeIssue) {
-        setActiveAlert(severeIssue);
+        // Only show if not already dismissed in this session
+        if (!dismissedAlertIds.current.has(severeIssue.id)) {
+          setActiveAlert(severeIssue);
+        }
       } else {
         setActiveAlert(null);
       }
@@ -121,6 +125,13 @@ const CitizenPortal = () => {
     issueService.deleteComment(issueId, commentId);
     refreshData(user.id);
     showSuccess("Comment deleted.");
+  };
+
+  const handleDismissAlert = () => {
+    if (activeAlert) {
+      dismissedAlertIds.current.add(activeAlert.id);
+      setActiveAlert(null);
+    }
   };
 
   // Manual Form Logic
@@ -277,7 +288,7 @@ const CitizenPortal = () => {
                 <MapPin className="text-red-600 w-5 h-5" />
                 <span className="text-sm font-bold text-slate-700">{activeAlert.location.address}</span>
               </div>
-              <Button onClick={() => setActiveAlert(null)} className="w-full py-8 text-lg font-black bg-slate-900 hover:bg-slate-800 rounded-2xl shadow-xl transition-all">
+              <Button onClick={handleDismissAlert} className="w-full py-8 text-lg font-black bg-slate-900 hover:bg-slate-800 rounded-2xl shadow-xl transition-all">
                 I Understand & Will Stay Safe
               </Button>
             </CardContent>
