@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
-import { aiService } from '@/backend/services/aiService';
+import { aiService, ChatMessage } from '@/backend/services/aiService';
 import { showSuccess, showError } from '@/utils/toast';
 import { Plus, MapPin, Clock, AlertCircle, LogOut, Search, User as UserIcon, Bell, Map as MapIcon, Loader2, Camera, X, Trophy, Heart, Sparkles, HandHelping, ThumbsUp, MessageSquare, Send, Flag, Trash2, Video, Bot, CheckCircle2, FileText, Megaphone, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -42,7 +42,7 @@ const CitizenPortal = () => {
 
   // AI Agent State
   const [aiStep, setAiStep] = useState<'initial' | 'location' | 'confirm'>('initial');
-  const [aiMessages, setAiMessages] = useState<{role: 'bot' | 'user', text: string}[]>([]);
+  const [aiMessages, setAiMessages] = useState<ChatMessage[]>([]);
   const [aiInput, setAiInput] = useState('');
   const [aiData, setAiData] = useState({
     description: '',
@@ -65,11 +65,9 @@ const CitizenPortal = () => {
     refreshData(parsedUser.id);
     checkNotifications(parsedUser.id);
 
-    // Poll for severe alerts
     const alertInterval = setInterval(() => {
       const severeIssue = mockDb.issues.find(i => i.isSevereAlert && i.status !== 'Resolved');
       if (severeIssue) {
-        // Only show if not already dismissed in this session
         if (!dismissedAlertIds.current.has(severeIssue.id)) {
           setActiveAlert(severeIssue);
         }
@@ -134,7 +132,6 @@ const CitizenPortal = () => {
     }
   };
 
-  // Manual Form Logic
   const handleManualImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -172,7 +169,6 @@ const CitizenPortal = () => {
     showSuccess('Thank you for your contribution! Our team is on it.');
   };
 
-  // AI Agent Logic
   const startAIAgent = () => {
     setShowAIAgent(true);
     setShowManualForm(false);
@@ -196,15 +192,37 @@ const CitizenPortal = () => {
     if (!aiInput.trim() && aiStep !== 'confirm') return;
 
     const userMsg = aiInput;
-    setAiMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    const newMessages: ChatMessage[] = [...aiMessages, { role: 'user', text: userMsg }];
+    setAiMessages(newMessages);
     setAiInput('');
 
-    if (aiStep === 'initial') {
-      const analysis = aiService.analyzeIssue(userMsg);
-      setAiData(prev => ({ ...prev, description: userMsg }));
+    if (aiStep === 'initial' || aiStep === 'location') {
+      const analysis = aiService.analyzeConversation(newMessages);
       
+      if (aiStep === 'initial') {
+        setAiData(prev => ({ ...prev, description: userMsg }));
+      }
+
+      if (aiStep === 'location' || (!analysis.hasLocation && aiStep === 'initial')) {
+        setIsGeocoding(true);
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(userMsg)}`);
+          const data = await response.json();
+          if (data && data.length > 0) {
+            const { lat, lon, display_name } = data[0];
+            setAiData(prev => ({ ...prev, address: display_name, lat: parseFloat(lat), lng: parseFloat(lon) }));
+            const updatedMessages: ChatMessage[] = [...newMessages, { role: 'bot', text: `I've found the location: ${display_name}. Does everything look correct? I'm ready to submit.` }];
+            setAiMessages(updatedMessages);
+            setAiStep('confirm');
+            setIsGeocoding(false);
+            return;
+          }
+        } catch (e) {}
+        setIsGeocoding(false);
+      }
+
       setTimeout(() => {
-        const botResponse = aiService.generateResponse(analysis);
+        const botResponse = aiService.generateResponse(analysis, newMessages);
         setAiMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
         if (!analysis.hasLocation) {
           setAiStep('location');
@@ -212,30 +230,12 @@ const CitizenPortal = () => {
           setAiStep('confirm');
         }
       }, 1000);
-    } else if (aiStep === 'location') {
-      setIsGeocoding(true);
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(userMsg)}`);
-        const data = await response.json();
-        if (data && data.length > 0) {
-          const { lat, lon, display_name } = data[0];
-          setAiData(prev => ({ ...prev, address: display_name, lat: parseFloat(lat), lng: parseFloat(lon) }));
-          setAiMessages(prev => [...prev, { role: 'bot', text: `I've found the location: ${display_name}. Does everything look correct? I'm ready to submit.` }]);
-          setAiStep('confirm');
-        } else {
-          setAiMessages(prev => [...prev, { role: 'bot', text: "I couldn't find that location. Could you try being more specific or give me a nearby landmark?" }]);
-        }
-      } catch (e) {
-        setAiMessages(prev => [...prev, { role: 'bot', text: "Sorry, I had trouble searching for that location. Please try again." }]);
-      } finally {
-        setIsGeocoding(false);
-      }
     }
   };
 
   const finalizeReport = () => {
     issueService.createIssue(user.id, {
-      title: '', // AI will generate
+      title: '',
       description: aiData.description,
       imageUrl: aiData.imageUrl,
       videoUrl: aiData.videoUrl,
@@ -266,7 +266,6 @@ const CitizenPortal = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
-      {/* Severe Alert Popup */}
       {activeAlert && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <Card className="w-full max-w-lg border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white border-t-8 border-red-600">

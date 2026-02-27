@@ -14,45 +14,72 @@ const PRIORITY_KEYWORDS = {
   Low: ['minor', 'small', 'request', 'suggestion', 'paint']
 };
 
+export interface ChatMessage {
+  role: 'bot' | 'user';
+  text: string;
+}
+
 export const aiService = {
-  analyzeIssue: (text: string) => {
-    const desc = text.toLowerCase();
+  analyzeConversation: (messages: ChatMessage[]) => {
+    // Combine all user messages to get full context
+    const userMessages = messages.filter(m => m.role === 'user').map(m => m.text);
+    const fullText = userMessages.join(' ').toLowerCase();
+    const latestText = userMessages[userMessages.length - 1]?.toLowerCase() || '';
     
-    // Detect Category
+    // Detect Category (checking full history)
     let category: IssueCategory = 'Other';
     let maxMatches = 0;
     for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-      const matches = keywords.filter(kw => desc.includes(kw)).length;
+      const matches = keywords.filter(kw => fullText.includes(kw)).length;
       if (matches > maxMatches) {
         maxMatches = matches;
         category = cat as IssueCategory;
       }
     }
 
-    // Detect Priority
+    // Detect Priority (checking full history)
     let priority: IssuePriority = 'Low';
-    if (PRIORITY_KEYWORDS.High.some(kw => desc.includes(kw))) {
+    if (PRIORITY_KEYWORDS.High.some(kw => fullText.includes(kw))) {
       priority = 'High';
-    } else if (PRIORITY_KEYWORDS.Medium.some(kw => desc.includes(kw))) {
+    } else if (PRIORITY_KEYWORDS.Medium.some(kw => fullText.includes(kw))) {
       priority = 'Medium';
     }
 
-    // Extract potential location hints
-    const locationHints = text.match(/(at|near|on|in|beside|opposite)\s+([A-Z][a-z]+\s?)+/g);
-    const hasLocation = locationHints !== null || desc.includes('street') || desc.includes('road') || desc.includes('avenue');
+    // Extract potential location hints (checking full history)
+    const locationHints = fullText.match(/(at|near|on|in|beside|opposite)\s+([A-Z][a-z]+\s?)+/g);
+    const hasLocation = locationHints !== null || fullText.includes('street') || fullText.includes('road') || fullText.includes('avenue');
+
+    // Check if the user is answering a specific question from the bot
+    const lastBotMessage = messages.filter(m => m.role === 'bot').pop()?.text.toLowerCase() || '';
+    const isAnsweringLocation = lastBotMessage.includes('location') || lastBotMessage.includes('venue');
 
     return {
       category,
       priority,
       hasLocation,
-      suggestedTitle: text.split('.').slice(0, 1)[0].substring(0, 50) + (text.length > 50 ? '...' : '')
+      isAnsweringLocation,
+      suggestedTitle: userMessages[0]?.split('.').slice(0, 1)[0].substring(0, 50) + (userMessages[0]?.length > 50 ? '...' : '')
     };
   },
 
-  generateResponse: (analysis: any) => {
-    if (!analysis.hasLocation) {
-      return "I've analyzed your report. It sounds like a " + analysis.category.toLowerCase() + " issue. Could you please tell me the exact venue or location so I can pin it on the map?";
+  generateResponse: (analysis: any, messages: ChatMessage[]) => {
+    const userMessages = messages.filter(m => m.role === 'user');
+    
+    if (userMessages.length === 1) {
+      if (!analysis.hasLocation) {
+        return `I've noted that this is a ${analysis.category.toLowerCase()} issue. To help our teams find it, could you please tell me the exact location or a nearby landmark?`;
+      }
+      return `I've analyzed your report. It looks like a ${analysis.priority} priority ${analysis.category} issue at ${analysis.hasLocation ? 'the location mentioned' : 'your area'}. Shall I go ahead and submit this for you?`;
     }
-    return "Got it! I've identified this as a " + analysis.priority + " priority " + analysis.category + " issue. I'm ready to submit this for you. Does everything look correct?";
+
+    if (analysis.isAnsweringLocation && analysis.hasLocation) {
+      return `Thanks for providing the location! I've updated the report. It's now a ${analysis.priority} priority ${analysis.category} issue. Ready to submit?`;
+    }
+
+    if (!analysis.hasLocation) {
+      return "I still need a location to pin this on the map. Could you please provide an address or landmark?";
+    }
+
+    return "Got it. I have all the details now. Does everything look correct for submission?";
   }
 };
