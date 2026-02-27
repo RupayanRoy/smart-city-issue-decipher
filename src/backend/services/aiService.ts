@@ -20,11 +20,39 @@ export interface ChatMessage {
 }
 
 export const aiService = {
+  analyzeIssue: (description: string) => {
+    const text = description.toLowerCase();
+    
+    // Detect Category
+    let category: IssueCategory = 'Other';
+    let maxMatches = 0;
+    for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+      const matches = keywords.filter(kw => text.includes(kw)).length;
+      if (matches > maxMatches) {
+        maxMatches = matches;
+        category = cat as IssueCategory;
+      }
+    }
+
+    // Detect Priority
+    let priority: IssuePriority = 'Low';
+    if (PRIORITY_KEYWORDS.High.some(kw => text.includes(kw))) {
+      priority = 'High';
+    } else if (PRIORITY_KEYWORDS.Medium.some(kw => text.includes(kw))) {
+      priority = 'Medium';
+    }
+
+    return {
+      category,
+      priority,
+      suggestedTitle: description.split('.').slice(0, 1)[0].substring(0, 50) + (description.length > 50 ? '...' : '')
+    };
+  },
+
   analyzeConversation: (messages: ChatMessage[]) => {
     // Combine all user messages to get full context
     const userMessages = messages.filter(m => m.role === 'user').map(m => m.text);
     const fullText = userMessages.join(' ').toLowerCase();
-    const latestText = userMessages[userMessages.length - 1]?.toLowerCase() || '';
     
     // Detect Category (checking full history)
     let category: IssueCategory = 'Other';
