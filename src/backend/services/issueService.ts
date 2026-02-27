@@ -40,6 +40,7 @@ export const issueService = {
     const issue = mockDb.issues.find(i => i.id === issueId);
     if (!issue) return;
 
+    if (!issue.upvotes) issue.upvotes = [];
     const index = issue.upvotes.indexOf(userId);
     if (index === -1) {
       issue.upvotes.push(userId);
@@ -60,6 +61,7 @@ export const issueService = {
     const issue = mockDb.issues.find(i => i.id === issueId);
     if (!issue) return;
 
+    if (!issue.reports) issue.reports = [];
     const index = issue.reports.indexOf(userId);
     if (index === -1) {
       issue.reports.push(userId);
@@ -83,6 +85,7 @@ export const issueService = {
       timestamp: new Date().toISOString()
     };
 
+    if (!issue.comments) issue.comments = [];
     issue.comments.push(newComment);
     mockDb.save();
     return issue;
@@ -92,6 +95,7 @@ export const issueService = {
     const issue = mockDb.issues.find(i => i.id === issueId);
     if (!issue) return;
 
+    if (!issue.comments) issue.comments = [];
     issue.comments = issue.comments.filter(c => c.id !== commentId);
     mockDb.save();
     return issue;
@@ -113,6 +117,7 @@ export const issueService = {
       }
     }
     
+    if (!issue.statusHistory) issue.statusHistory = [];
     issue.statusHistory.push({
       status,
       timestamp: new Date().toISOString(),
@@ -150,6 +155,7 @@ export const issueService = {
     }
 
     issue.status = 'Flagged';
+    if (!issue.statusHistory) issue.statusHistory = [];
     issue.statusHistory.push({
       status: 'Flagged',
       timestamp: new Date().toISOString(),
