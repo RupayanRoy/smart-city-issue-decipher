@@ -23,7 +23,6 @@ import {
   TrendingUp, Users, MessageSquare, Terminal
 } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
-import Footer from '@/components/Footer';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -456,7 +455,21 @@ const AdminDashboard = () => {
           </div>
         </div>
       </main>
-      <Footer />
+
+      {/* Tactical Footer */}
+      <footer className="bg-slate-900/80 border-t border-slate-800 py-4 px-6">
+        <div className="max-w-[1800px] mx-auto flex justify-between items-center text-[10px] font-black text-slate-600 uppercase tracking-widest">
+          <div className="flex gap-6">
+            <span>System Status: Nominal</span>
+            <span>Encryption: AES-256</span>
+            <span>Location Tracking: Active</span>
+          </div>
+          <div className="flex gap-2 items-center">
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>CityCare Network v4.2.0-Stable</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
