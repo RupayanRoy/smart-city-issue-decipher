@@ -1,41 +1,38 @@
-import { supabase } from '@/integrations/supabase/client';
+import { mockDb } from '../db';
 
 export const notificationService = {
-  sendResolutionMessage: async (citizenId: string, issueId: string, issueTitle: string) => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: citizenId,
-        issue_id: issueId,
-        title: 'Issue Resolved',
-        message: `Great news! Your report "${issueTitle}" has been marked as resolved by the city authorities. Please verify the work.`,
-        type: 'resolution',
-        is_read: false
-      })
-      .select()
-      .single();
+  sendResolutionMessage: (citizenId: string, issueId: string, issueTitle: string) => {
+    const user = mockDb.users.find(u => u.id === citizenId);
+    if (!user) return;
 
-    if (error) throw error;
-    return data;
+    if (!user.notifications) user.notifications = [];
+    
+    user.notifications.push({
+      id: `notif-${Date.now()}`,
+      userId: citizenId,
+      issueId,
+      title: 'Issue Resolved',
+      message: `Great news! Your report "${issueTitle}" has been marked as resolved by the city authorities. Please verify the work.`,
+      type: 'resolution',
+      isRead: false,
+      createdAt: new Date().toISOString()
+    });
+    
+    mockDb.save();
   },
 
-  getNotifications: async (userId: string) => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data;
+  getUnreadCount: (userId: string) => {
+    const user = mockDb.users.find(u => u.id === userId);
+    return user?.notifications?.filter(n => !n.isRead).length || 0;
   },
 
-  markAsRead: async (notificationId: string) => {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', notificationId);
-
-    if (error) throw error;
+  markAsRead: (userId: string, notificationId: string) => {
+    const user = mockDb.users.find(u => u.id === userId);
+    if (!user || !user.notifications) return;
+    
+    const notif = user.notifications.find(n => n.id === notificationId);
+    if (notif) notif.isRead = true;
+    
+    mockDb.save();
   }
 };

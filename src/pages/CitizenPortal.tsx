@@ -7,13 +7,10 @@ import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { aiService, ChatMessage } from '@/backend/services/aiService';
 import { notificationService } from '@/backend/services/notificationService';
-import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
-import { Search, HandHelping, Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle, MapPin, ClipboardList } from 'lucide-react';
+import { showSuccess, showError } from '@/utils/toast';
+import { Search, HandHelping, Mail, RefreshCw, CheckCircle2, ClipboardList } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { uploadToCloudinary } from '@/utils/cloudinary';
 
 // Modular Components
 import PortalHeader from '@/components/citizen/PortalHeader';
@@ -42,7 +39,6 @@ const CitizenPortal = () => {
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [pendingSubmission, setPendingSubmission] = useState<any>(null);
 
-  // Map state
   const [mapCenter, setMapCenter] = useState<[number, number]>([12.8406, 80.1534]);
 
   const [manualData, setManualData] = useState({
@@ -63,8 +59,7 @@ const CitizenPortal = () => {
     const storedUser = localStorage.getItem('current_user');
     if (!storedUser) return navigate('/login');
     const parsedUser = JSON.parse(storedUser);
-    const dbUser = mockDb.users.find(u => u.id === parsedUser.id);
-    setUser(dbUser || parsedUser);
+    setUser(parsedUser);
     refreshData(parsedUser.id);
 
     const alertInterval = setInterval(() => {
@@ -106,7 +101,7 @@ const CitizenPortal = () => {
         setMapCenter([newLat, newLng]);
         showSuccess("Location found and pinned on map.");
       } else {
-        showError("Could not find that location. Please try a different address.");
+        showError("Could not find that location.");
       }
     } catch (e) {
       showError("Geocoding service unavailable.");
@@ -143,7 +138,7 @@ const CitizenPortal = () => {
 
   const handleReissue = (issueId: string) => {
     issueService.reissueIssue(issueId, user.id, "Citizen reported that the issue persists after resolution.");
-    showSuccess("Issue re-issued with High Priority. Authorities have been notified.");
+    showSuccess("Issue re-issued with High Priority.");
     refreshData(user.id);
   };
 
@@ -167,7 +162,7 @@ const CitizenPortal = () => {
     refreshData(user.id);
     setShowManualForm(false);
     setManualData({ title: '', description: '', address: '', lat: 12.8406, lng: 80.1534, imageUrl: '' });
-    showSuccess('Thank you for your contribution! Our team is on it.');
+    showSuccess('Thank you for your contribution!');
   };
 
   const handleAISubmit = async () => {
@@ -192,7 +187,7 @@ const CitizenPortal = () => {
             const newLng = parseFloat(lon);
             setAiData(prev => ({ ...prev, address: display_name, lat: newLat, lng: newLng }));
             setMapCenter([newLat, newLng]);
-            setAiMessages(prev => [...prev, { role: 'bot', text: `I've found the location: ${display_name}. Does everything look correct? I'm ready to submit.` }]);
+            setAiMessages(prev => [...prev, { role: 'bot', text: `I've found the location: ${display_name}. Ready to submit?` }]);
             setAiStep('confirm');
             setIsGeocoding(false);
             return;
@@ -229,7 +224,7 @@ const CitizenPortal = () => {
     setShowAIAgent(false);
     setAiMessages([]);
     setAiData({ description: '', address: '', lat: 12.8406, lng: 80.1534, imageUrl: '', videoUrl: '' });
-    showSuccess('Report filed automatically! Thank you for being a hero.');
+    showSuccess('Report filed automatically!');
   };
 
   const handleMatchFound = (existingIssueId: string) => {
@@ -249,13 +244,7 @@ const CitizenPortal = () => {
 
   const filteredNearbyIssues = nearbyIssues.filter(i => {
     const query = searchQuery.toLowerCase();
-    const matchesSearch = 
-      i.title.toLowerCase().includes(query) || 
-      i.description.toLowerCase().includes(query) || 
-      i.category.toLowerCase().includes(query) ||
-      i.location.address.toLowerCase().includes(query);
-    
-    return matchesSearch && i.status !== 'Flagged';
+    return (i.title.toLowerCase().includes(query) || i.description.toLowerCase().includes(query)) && i.status !== 'Flagged';
   });
 
   return (
@@ -282,7 +271,7 @@ const CitizenPortal = () => {
 
       <main className="max-w-6xl mx-auto p-6 space-y-8 flex-1">
         <HeroSection 
-          onStartAI={() => { setShowAIAgent(true); setShowManualForm(false); setAiMessages([{ role: 'bot', text: "Hello! I'm your CityCare AI Assistant. Describe the issue you're seeing." }]); setAiStep('initial'); }}
+          onStartAI={() => { setShowAIAgent(true); setShowManualForm(false); setAiMessages([{ role: 'bot', text: "Hello! Describe the issue you're seeing." }]); setAiStep('initial'); }}
           onToggleManual={() => { setShowManualForm(!showManualForm); setShowAIAgent(false); }}
         />
 
@@ -290,20 +279,15 @@ const CitizenPortal = () => {
           <AIAgentTerminal 
             messages={aiMessages} step={aiStep} input={aiInput} data={aiData} isGeocoding={isGeocoding} chatEndRef={chatEndRef}
             onClose={() => setShowAIAgent(false)} onInputChange={setAiInput} onSubmit={handleAISubmit} onConfirm={handleAIConfirm}
-            onFileUpload={async (e, type) => {
+            onFileUpload={(e, type) => {
               const file = e.target.files?.[0];
               if (file) {
-                const tid = showLoading(`Uploading ${type}...`);
-                try {
-                  const url = await uploadToCloudinary(file, type);
-                  setAiData(prev => ({ ...prev, [type === 'image' ? 'imageUrl' : 'videoUrl']: url }));
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  setAiData(prev => ({ ...prev, [type === 'image' ? 'imageUrl' : 'videoUrl']: reader.result as string }));
                   setAiMessages(prev => [...prev, { role: 'user', text: `Uploaded a ${type}.` }]);
-                  showSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully!`);
-                } catch (err) {
-                  showError(`Failed to upload ${type}.`);
-                } finally {
-                  dismissToast(tid);
-                }
+                };
+                reader.readAsDataURL(file);
               }
             }}
           />
@@ -316,30 +300,22 @@ const CitizenPortal = () => {
             onChange={setManualData} 
             onSubmit={handleManualSubmit}
             onLocate={handleManualGeocode}
-            onImageUpload={async (e) => {
+            onImageUpload={(e) => {
               const file = e.target.files?.[0];
               if (file) {
-                const tid = showLoading("Uploading image...");
-                try {
-                  const url = await uploadToCloudinary(file, 'image');
-                  setManualData(prev => ({ ...prev, imageUrl: url }));
-                  showSuccess("Image uploaded successfully!");
-                } catch (err) {
-                  showError("Failed to upload image.");
-                } finally {
-                  dismissToast(tid);
-                }
+                const reader = new FileReader();
+                reader.onloadend = () => setManualData(prev => ({ ...prev, imageUrl: reader.result as string }));
+                reader.readAsDataURL(file);
               }
             }}
             onMapChange={async (lat, lng) => {
               setManualData(prev => ({ ...prev, lat, lng }));
               setMapCenter([lat, lng]);
-              setIsGeocoding(true);
               try {
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
                 const data = await response.json();
                 if (data?.display_name) setManualData(prev => ({ ...prev, address: data.display_name }));
-              } catch (e) {} finally { setIsGeocoding(false); }
+              } catch (e) {}
             }}
           />
         )}
@@ -362,7 +338,7 @@ const CitizenPortal = () => {
               <div className="lg:col-span-2 space-y-6">
                 <div className="relative w-full">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <Input placeholder="Search by title, category, or description..." className="pl-12 h-12 rounded-2xl border-slate-200 bg-white shadow-sm" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                  <Input placeholder="Search reports..." className="pl-12 h-12 rounded-2xl border-slate-200 bg-white shadow-sm" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                 </div>
                 <div className="grid grid-cols-1 gap-6">
                   {filteredNearbyIssues.map(issue => (
@@ -372,11 +348,6 @@ const CitizenPortal = () => {
                       onCommentChange={(id, text) => setCommentText(prev => ({ ...prev, [id]: text }))}
                     />
                   ))}
-                  {filteredNearbyIssues.length === 0 && (
-                    <div className="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-slate-100">
-                      <p className="text-slate-400 font-bold">No reports found matching your search.</p>
-                    </div>
-                  )}
                 </div>
               </div>
               <div className="space-y-6">
@@ -398,20 +369,13 @@ const CitizenPortal = () => {
 
           <TabsContent value="issues" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {myIssues.length === 0 ? (
-                <div className="col-span-full text-center py-32 bg-white rounded-[2rem] border-4 border-dashed border-slate-100">
-                  <HandHelping className="w-10 h-10 text-slate-300 mx-auto mb-6" />
-                  <h3 className="text-xl font-black text-slate-900 mb-2">No reports yet</h3>
-                </div>
-              ) : (
-                myIssues.map(issue => (
-                  <IssueCard 
-                    key={issue.id} issue={issue} user={user} commentText={commentText[issue.id] || ''}
-                    onUpvote={handleUpvote} onReport={handleReport} onAddComment={handleAddComment} onDeleteComment={handleDeleteComment}
-                    onCommentChange={(id, text) => setCommentText(prev => ({ ...prev, [id]: text }))}
-                  />
-                ))
-              )}
+              {myIssues.map(issue => (
+                <IssueCard 
+                  key={issue.id} issue={issue} user={user} commentText={commentText[issue.id] || ''}
+                  onUpvote={handleUpvote} onReport={handleReport} onAddComment={handleAddComment} onDeleteComment={handleDeleteComment}
+                  onCommentChange={(id, text) => setCommentText(prev => ({ ...prev, [id]: text }))}
+                />
+              ))}
             </div>
           </TabsContent>
 
@@ -419,7 +383,6 @@ const CitizenPortal = () => {
             <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
               <CardHeader className="p-8 border-b border-slate-50">
                 <CardTitle className="text-2xl font-black text-slate-900">Official Communications</CardTitle>
-                <CardDescription className="font-medium text-slate-500">Updates regarding your filed reports and community alerts.</CardDescription>
               </CardHeader>
               <CardContent className="p-8">
                 {!user?.notifications || user.notifications.length === 0 ? (
@@ -454,7 +417,7 @@ const CitizenPortal = () => {
                             <Button 
                               variant="outline" 
                               className="rounded-xl font-bold border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50"
-                              onClick={(e) => { e.stopPropagation(); showSuccess("Thank you for confirming!"); handleMarkRead(notif.id); }}
+                              onClick={(e) => { e.stopPropagation(); showSuccess("Confirmed!"); handleMarkRead(notif.id); }}
                             >
                               Confirm Resolution
                             </Button>
@@ -463,7 +426,7 @@ const CitizenPortal = () => {
                               className="rounded-xl font-bold border-2 border-red-600 text-red-600 hover:bg-red-50"
                               onClick={(e) => { e.stopPropagation(); handleReissue(notif.issueId); handleMarkRead(notif.id); }}
                             >
-                              <RefreshCw className="mr-2 w-4 h-4" /> Re-issue (Problem Persists)
+                              <RefreshCw className="mr-2 w-4 h-4" /> Re-issue
                             </Button>
                           </div>
                         )}

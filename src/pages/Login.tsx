@@ -2,84 +2,53 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Heart, Shield, User, HardHat, Lock, UserCircle, Loader2 } from 'lucide-react';
+import { Heart, Shield, User, HardHat, Lock, UserCircle } from 'lucide-react';
 import Footer from '@/components/Footer';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { mockDb } from '@/backend/db';
 import { showSuccess, showError } from '@/utils/toast';
 
 const Login = () => {
   const navigate = useNavigate();
   const [role, setRole] = useState<'citizen' | 'worker'>('citizen');
   const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
   
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [name, setName] = useState('');
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
-    // Internally map username to an email format for Supabase
-    const email = username.includes('@') ? username : `${username}@citycare.com`;
-
-    try {
-      if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        
-        // Fetch profile to determine redirect
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single();
-
-        if (profile?.role === 'admin') navigate('/admin');
-        else if (profile?.role === 'worker') navigate('/worker');
+    if (isLogin) {
+      const user = mockDb.users.find(u => u.email === email && u.password === password);
+      if (user) {
+        localStorage.setItem('current_user', JSON.stringify(user));
+        showSuccess(`Welcome back, ${user.name}!`);
+        if (user.role === 'admin') navigate('/admin');
+        else if (user.role === 'worker') navigate('/worker');
         else navigate('/citizen');
-        
-        showSuccess("Welcome back!");
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName || username,
-              role: role,
-            }
-          }
-        });
-        if (error) throw error;
-        
-        showSuccess("Account created! You can now log in.");
-        setIsLogin(true);
+        showError("Invalid credentials. Try admin@smartcity.gov / password123");
       }
-    } catch (error: any) {
-      showError(error.message || "Authentication failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdminBypass = () => {
-    // For hackathon demo purposes: directly navigate if credentials match
-    // In a real app, this would still go through auth
-    if (username === 'admin@smartcity.gov' && password === 'password123') {
-      showSuccess("Admin Access Granted (Demo Mode)");
-      navigate('/admin');
     } else {
-      showError("Invalid Admin Credentials");
+      const newUser = {
+        id: `u-${Date.now()}`,
+        name,
+        email,
+        password,
+        role,
+        points: 0
+      };
+      mockDb.users.push(newUser);
+      mockDb.save();
+      localStorage.setItem('current_user', JSON.stringify(newUser));
+      showSuccess("Account created successfully!");
+      navigate(role === 'worker' ? '/worker' : '/citizen');
     }
   };
 
@@ -98,7 +67,7 @@ const Login = () => {
           <CardHeader className="bg-slate-900 text-white text-center py-8">
             <CardTitle className="text-xl">{isLogin ? 'Welcome Back' : 'Join the Movement'}</CardTitle>
             <CardDescription className="text-slate-400">
-              {isLogin ? 'Sign in with your username' : 'Create your citizen or worker account'}
+              {isLogin ? 'Sign in to your account' : 'Create your citizen or worker account'}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-8 space-y-6">
@@ -129,15 +98,15 @@ const Login = () => {
 
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="name">Full Name</Label>
                   <div className="relative">
                     <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <Input 
-                      id="fullName"
+                      id="name"
                       placeholder="Your Name" 
                       className="pl-10 rounded-xl h-12"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       required={!isLogin}
                     />
                   </div>
@@ -145,15 +114,16 @@ const Login = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <Input 
-                    id="username"
-                    placeholder="e.g. rupayan" 
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com" 
                     className="pl-10 rounded-xl h-12"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
@@ -175,8 +145,8 @@ const Login = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold text-lg" disabled={loading}>
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? 'Sign In' : 'Create Account')}
+              <Button type="submit" className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold text-lg">
+                {isLogin ? 'Sign In' : 'Create Account'}
               </Button>
             </form>
 
@@ -190,22 +160,12 @@ const Login = () => {
             </div>
 
             <div className="pt-6 border-t border-slate-100">
-              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-amber-700 font-black text-xs uppercase tracking-widest">
-                    <Shield className="w-4 h-4" /> Hackathon Admin Access
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-7 text-[10px] font-black bg-amber-200/50 hover:bg-amber-200 text-amber-800 rounded-lg"
-                    onClick={handleAdminBypass}
-                  >
-                    QUICK LOGIN
-                  </Button>
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center gap-2 text-amber-700 font-black text-xs uppercase tracking-widest">
+                  <Shield className="w-4 h-4" /> Hackathon Admin Access
                 </div>
                 <div className="text-sm space-y-1">
-                  <p className="text-slate-600 font-medium">Username: <span className="font-bold text-slate-900">admin@smartcity.gov</span></p>
+                  <p className="text-slate-600 font-medium">Email: <span className="font-bold text-slate-900">admin@smartcity.gov</span></p>
                   <p className="text-slate-600 font-medium">Password: <span className="font-bold text-slate-900">password123</span></p>
                 </div>
               </div>
