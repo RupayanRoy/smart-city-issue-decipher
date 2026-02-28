@@ -36,6 +36,27 @@ export const issueService = {
     return newIssue;
   },
 
+  findSimilarIssues: (description: string, location: Location) => {
+    const keywords = description.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    
+    return mockDb.issues.filter(issue => {
+      if (issue.status === 'Resolved' || issue.status === 'Flagged') return false;
+
+      // Check location proximity (roughly within 500m)
+      const latDiff = Math.abs(issue.location.lat - location.lat);
+      const lngDiff = Math.abs(issue.location.lng - location.lng);
+      const isNear = latDiff < 0.005 && lngDiff < 0.005;
+
+      if (!isNear) return false;
+
+      // Check keyword overlap
+      const issueText = (issue.title + " " + issue.description).toLowerCase();
+      const matchCount = keywords.filter(kw => issueText.includes(kw)).length;
+      
+      return matchCount >= 2; // At least 2 keywords match in a nearby area
+    });
+  },
+
   toggleUpvote: (issueId: string, userId: string) => {
     const issue = mockDb.issues.find(i => i.id === issueId);
     if (!issue) return;
@@ -44,6 +65,7 @@ export const issueService = {
     const index = issue.upvotes.indexOf(userId);
     if (index === -1) {
       issue.upvotes.push(userId);
+      // Increase priority based on community support
       if (issue.upvotes.length >= 5 && issue.priority !== 'High') {
         issue.priority = 'High';
       } else if (issue.upvotes.length >= 2 && issue.priority === 'Low') {

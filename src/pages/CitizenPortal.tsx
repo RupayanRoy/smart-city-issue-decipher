@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { aiService, ChatMessage } from '@/backend/services/aiService';
@@ -30,6 +31,11 @@ const CitizenPortal = () => {
   const [activeAlert, setActiveAlert] = useState<any>(null);
   const dismissedAlertIds = useRef<Set<string>>(new Set());
   
+  // Duplicate Check State
+  const [similarIssues, setSimilarIssues] = useState<any[]>([]);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [pendingSubmission, setPendingSubmission] = useState<any>(null);
+
   // Manual Form State
   const [manualData, setManualData] = useState({
     title: '',
@@ -157,11 +163,26 @@ const CitizenPortal = () => {
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const similar = issueService.findSimilarIssues(manualData.description, { lat: manualData.lat, lng: manualData.lng });
+    
+    if (similar.length > 0) {
+      setSimilarIssues(similar);
+      setPendingSubmission({
+        type: 'manual',
+        data: { ...manualData }
+      });
+      setShowDuplicateDialog(true);
+    } else {
+      finalizeManualSubmission(manualData);
+    }
+  };
+
+  const finalizeManualSubmission = (data: any) => {
     issueService.createIssue(user.id, {
-      title: manualData.title,
-      description: manualData.description,
-      imageUrl: manualData.imageUrl,
-      location: { address: manualData.address, lat: manualData.lat, lng: manualData.lng }
+      title: data.title,
+      description: data.description,
+      imageUrl: data.imageUrl,
+      location: { address: data.address, lat: data.lat, lng: data.lng }
     });
     refreshData(user.id);
     setShowManualForm(false);
@@ -233,19 +254,54 @@ const CitizenPortal = () => {
     }
   };
 
-  const finalizeReport = () => {
+  const handleAIConfirm = () => {
+    const similar = issueService.findSimilarIssues(aiData.description, { lat: aiData.lat, lng: aiData.lng });
+    
+    if (similar.length > 0) {
+      setSimilarIssues(similar);
+      setPendingSubmission({
+        type: 'ai',
+        data: { ...aiData }
+      });
+      setShowDuplicateDialog(true);
+    } else {
+      finalizeAISubmission(aiData);
+    }
+  };
+
+  const finalizeAISubmission = (data: any) => {
     issueService.createIssue(user.id, {
       title: '',
-      description: aiData.description,
-      imageUrl: aiData.imageUrl,
-      videoUrl: aiData.videoUrl,
-      location: { address: aiData.address, lat: aiData.lat, lng: aiData.lng }
+      description: data.description,
+      imageUrl: data.imageUrl,
+      videoUrl: data.videoUrl,
+      location: { address: data.address, lat: data.lat, lng: data.lng }
     });
     refreshData(user.id);
     setShowAIAgent(false);
     setAiMessages([]);
     setAiData({ description: '', address: '', lat: 12.8406, lng: 80.1534, imageUrl: '', videoUrl: '' });
     showSuccess('Report filed automatically! Thank you for being a hero.');
+  };
+
+  const handleMatchFound = (existingIssueId: string) => {
+    issueService.toggleUpvote(existingIssueId, user.id);
+    showSuccess("Thank you! We've added your support to the existing report. This helps us prioritize it!");
+    setShowDuplicateDialog(false);
+    setPendingSubmission(null);
+    setShowManualForm(false);
+    setShowAIAgent(false);
+    refreshData(user.id);
+  };
+
+  const handleNoMatch = () => {
+    if (pendingSubmission.type === 'manual') {
+      finalizeManualSubmission(pendingSubmission.data);
+    } else {
+      finalizeAISubmission(pendingSubmission.data);
+    }
+    setShowDuplicateDialog(false);
+    setPendingSubmission(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -266,6 +322,56 @@ const CitizenPortal = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+      {/* Duplicate Detection Dialog */}
+      <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <DialogContent className="max-w-2xl rounded-[2rem] border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              <AlertTriangle className="text-amber-500 w-6 h-6" /> Similar Issues Found
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium">
+              We found some existing reports in this area that look similar to yours. Is your issue one of these?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 my-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {similarIssues.map(issue => (
+              <Card key={issue.id} className="border-2 border-slate-100 hover:border-emerald-500 transition-all cursor-pointer group" onClick={() => handleMatchFound(issue.id)}>
+                <CardContent className="p-6 flex gap-4">
+                  {issue.imageUrl && (
+                    <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0">
+                      <img src={issue.imageUrl} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-1">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-black text-slate-900 group-hover:text-emerald-600 transition-colors">{issue.title}</h4>
+                      {getStatusBadge(issue.status)}
+                    </div>
+                    <p className="text-xs text-slate-500 line-clamp-2">{issue.description}</p>
+                    <div className="flex items-center gap-3 pt-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                        <ThumbsUp className="w-3 h-3" /> {issue.upvotes?.length || 0} Supporters
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> {issue.location.address.split(',')[0]}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-3">
+            <Button variant="ghost" className="rounded-xl font-bold text-slate-500" onClick={handleNoMatch}>
+              None of these, submit my report
+            </Button>
+            <p className="text-[10px] text-slate-400 text-center sm:text-left italic">
+              * Selecting an existing issue will upvote it and notify authorities of increased urgency.
+            </p>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {activeAlert && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <Card className="w-full max-w-lg border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white border-t-8 border-red-600">
@@ -388,7 +494,7 @@ const CitizenPortal = () => {
                         {aiData.videoUrl && <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center border"><Video className="w-6 h-6 text-slate-400" /></div>}
                       </div>
                     </div>
-                    <Button onClick={finalizeReport} className="w-full bg-emerald-600 hover:bg-emerald-700 font-black rounded-xl">Confirm & File Report</Button>
+                    <Button onClick={handleAIConfirm} className="w-full bg-emerald-600 hover:bg-emerald-700 font-black rounded-xl">Confirm & File Report</Button>
                   </div>
                 </div>
               )}
