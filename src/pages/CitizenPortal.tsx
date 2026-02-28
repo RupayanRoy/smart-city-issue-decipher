@@ -8,7 +8,7 @@ import { issueService } from '@/backend/services/issueService';
 import { aiService, ChatMessage } from '@/backend/services/aiService';
 import { notificationService } from '@/backend/services/notificationService';
 import { showSuccess, showError } from '@/utils/toast';
-import { Search, HandHelping, Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle, MapPin } from 'lucide-react';
+import { Search, HandHelping, Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle, MapPin, ClipboardList } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import IssueCard from '@/components/citizen/IssueCard';
 import ImpactTimeline from '@/components/citizen/ImpactTimeline';
 import SevereAlertOverlay from '@/components/citizen/SevereAlertOverlay';
 import DuplicateDetectionDialog from '@/components/citizen/DuplicateDetectionDialog';
+import StatusTracker from '@/components/citizen/StatusTracker';
 
 const CitizenPortal = () => {
   const [user, setUser] = useState<any>(null);
@@ -333,6 +334,9 @@ const CitizenPortal = () => {
         <Tabs defaultValue="nearby" className="w-full">
           <TabsList className="mb-8 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm inline-flex">
             <TabsTrigger value="nearby" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white">City Pulse</TabsTrigger>
+            <TabsTrigger value="track" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white flex items-center gap-2">
+              <ClipboardList className="w-4 h-4" /> Track Report
+            </TabsTrigger>
             <TabsTrigger value="issues" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white">My Contributions</TabsTrigger>
             <TabsTrigger value="messages" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white flex items-center gap-2">
               Messages {notificationService.getUnreadCount(user?.id) > 0 && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
@@ -373,6 +377,10 @@ const CitizenPortal = () => {
                 </Card>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="track">
+            <StatusTracker myIssues={myIssues} />
           </TabsContent>
 
           <TabsContent value="issues" className="space-y-6">
