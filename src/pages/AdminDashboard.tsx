@@ -457,19 +457,32 @@ const AdminDashboard = () => {
       </main>
 
       {/* Tactical Footer */}
-      <footer className="bg-slate-900/80 border-t border-slate-800 py-4 px-6">
-        <div className="max-w-[1800px] mx-auto flex justify-between items-center text-[10px] font-black text-slate-600 uppercase tracking-widest">
-          <div className="flex gap-6 items-center">
-            <span>System Status: Nominal</span>
-            <span className="w-1 h-1 bg-slate-800 rounded-full" />
-            <span className="flex items-center gap-1">
-              <Code2 className="w-3 h-3" />
-              Built by <span className="text-emerald-500">Deploy & Pray</span>
-            </span>
+      <footer className="bg-slate-900/80 border-t border-slate-800 py-12 px-8 mt-auto">
+        <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+          <div className="flex flex-wrap justify-center gap-x-10 gap-y-4 items-center">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>System Status: Nominal</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Shield className="w-3 h-3 text-emerald-500" />
+              <span>Encryption: AES-256 Active</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="w-3 h-3 text-emerald-500" />
+              <span>Location Tracking: Active</span>
+            </div>
           </div>
-          <div className="flex gap-2 items-center">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>CityCare Network v4.2.0-Stable</span>
+          
+          <div className="flex items-center gap-3 bg-slate-800/30 px-6 py-3 rounded-2xl border border-slate-700/30">
+            <Code2 className="w-4 h-4 text-emerald-500" />
+            <span>Built by <span className="text-emerald-500">Deploy & Pray</span></span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-slate-600">Network Node: v4.2.0-Stable</span>
+            <div className="h-4 w-px bg-slate-800" />
+            <span className="text-emerald-500/50">© 2024 CityCare Command</span>
           </div>
         </div>
       </footer>
