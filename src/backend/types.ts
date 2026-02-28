@@ -1,5 +1,16 @@
 export type UserRole = 'citizen' | 'admin' | 'worker';
 
+export interface Notification {
+  id: string;
+  userId: string;
+  issueId: string;
+  title: string;
+  message: string;
+  type: 'resolution' | 'system';
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -8,6 +19,7 @@ export interface User {
   password?: string;
   points?: number;
   department?: string;
+  notifications?: Notification[];
 }
 
 export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Other';
@@ -68,6 +80,7 @@ export interface Issue {
   comments: Comment[];
   escalated: boolean;
   isSevereAlert?: boolean;
+  isReissued?: boolean;
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;

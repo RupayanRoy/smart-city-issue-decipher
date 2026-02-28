@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { aiService, ChatMessage } from '@/backend/services/aiService';
+import { notificationService } from '@/backend/services/notificationService';
 import { showSuccess } from '@/utils/toast';
-import { Search, HandHelping, Loader2 } from 'lucide-react';
+import { Search, HandHelping, Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 import Footer from '@/components/Footer';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 // Modular Components
 import PortalHeader from '@/components/citizen/PortalHeader';
@@ -26,7 +29,6 @@ const CitizenPortal = () => {
   const [myIssues, setMyIssues] = useState<any[]>([]);
   const [nearbyIssues, setNearbyIssues] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
   const [showAIAgent, setShowAIAgent] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -59,7 +61,6 @@ const CitizenPortal = () => {
     const dbUser = mockDb.users.find(u => u.id === parsedUser.id);
     setUser(dbUser || parsedUser);
     refreshData(parsedUser.id);
-    checkNotifications(parsedUser.id);
 
     const alertInterval = setInterval(() => {
       const severeIssue = mockDb.issues.find(i => i.isSevereAlert && i.status !== 'Resolved');
@@ -72,14 +73,6 @@ const CitizenPortal = () => {
 
     return () => clearInterval(alertInterval);
   }, []);
-
-  const checkNotifications = (userId: string) => {
-    const resolvedUnnotified = mockDb.issues.filter(i => i.citizenId === userId && i.status === 'Resolved' && !i.notified);
-    resolvedUnnotified.forEach(issue => {
-      showSuccess(`Heroic Work! Your report "${issue.title}" has been resolved. You've earned 10 Impact Points! 🏆`);
-      issueService.markAsNotified(issue.id);
-    });
-  };
 
   const refreshData = (userId: string) => {
     setMyIssues(mockDb.issues.filter(i => i.citizenId === userId));
@@ -113,6 +106,12 @@ const CitizenPortal = () => {
     issueService.deleteComment(issueId, commentId);
     refreshData(user.id);
     showSuccess("Comment deleted.");
+  };
+
+  const handleReissue = (issueId: string) => {
+    issueService.reissueIssue(issueId, user.id, "Citizen reported that the issue persists after resolution.");
+    showSuccess("Issue re-issued with High Priority. Authorities have been notified.");
+    refreshData(user.id);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -207,6 +206,11 @@ const CitizenPortal = () => {
     refreshData(user.id);
   };
 
+  const handleMarkRead = (notifId: string) => {
+    notificationService.markAsRead(user.id, notifId);
+    refreshData(user.id);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       <DuplicateDetectionDialog 
@@ -280,6 +284,9 @@ const CitizenPortal = () => {
           <TabsList className="mb-8 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm inline-flex">
             <TabsTrigger value="nearby" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white">City Pulse</TabsTrigger>
             <TabsTrigger value="issues" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white">My Contributions</TabsTrigger>
+            <TabsTrigger value="messages" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white flex items-center gap-2">
+              Messages {notificationService.getUnreadCount(user?.id) > 0 && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+            </TabsTrigger>
             <TabsTrigger value="activity" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white">Recent Activity</TabsTrigger>
           </TabsList>
 
@@ -326,6 +333,66 @@ const CitizenPortal = () => {
                 ))
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="messages" className="space-y-6">
+            <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
+              <CardHeader className="p-8 border-b border-slate-50">
+                <CardTitle className="text-2xl font-black text-slate-900">Official Communications</CardTitle>
+                <CardDescription className="font-medium text-slate-500">Updates regarding your filed reports and community alerts.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8">
+                {!user?.notifications || user.notifications.length === 0 ? (
+                  <div className="text-center py-20">
+                    <Mail className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                    <p className="text-slate-400 font-bold">No messages yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {user.notifications.map((notif: any) => (
+                      <div 
+                        key={notif.id} 
+                        className={`p-6 rounded-3xl border-2 transition-all ${notif.isRead ? 'bg-slate-50 border-slate-100' : 'bg-white border-emerald-100 shadow-md'}`}
+                        onClick={() => handleMarkRead(notif.id)}
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-xl ${notif.type === 'resolution' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                              {notif.type === 'resolution' ? <CheckCircle2 className="w-5 h-5" /> : <Mail className="w-5 h-5" />}
+                            </div>
+                            <div>
+                              <h4 className="font-black text-slate-900">{notif.title}</h4>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(notif.createdAt).toLocaleString()}</p>
+                            </div>
+                          </div>
+                          {!notif.isRead && <Badge className="bg-emerald-600">New</Badge>}
+                        </div>
+                        <p className="text-slate-600 text-sm font-medium mb-6 leading-relaxed">{notif.message}</p>
+                        
+                        {notif.type === 'resolution' && (
+                          <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100">
+                            <Button 
+                              variant="outline" 
+                              className="rounded-xl font-bold border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                              onClick={(e) => { e.stopPropagation(); showSuccess("Thank you for confirming!"); handleMarkRead(notif.id); }}
+                            >
+                              Confirm Resolution
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="rounded-xl font-bold border-2 border-red-600 text-red-600 hover:bg-red-50"
+                              onClick={(e) => { e.stopPropagation(); handleReissue(notif.issueId); handleMarkRead(notif.id); }}
+                            >
+                              <RefreshCw className="mr-2 w-4 h-4" /> Re-issue (Problem Persists)
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="activity">

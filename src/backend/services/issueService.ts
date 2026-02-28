@@ -1,6 +1,7 @@
 import { mockDb } from '../db';
 import { Issue, IssueCategory, IssuePriority, IssueStatus, Location, Comment, WorkerReport } from '../types';
 import { aiService } from './aiService';
+import { notificationService } from './notificationService';
 
 export const issueService = {
   createIssue: (citizenId: string, data: { title: string; description: string; imageUrl?: string; videoUrl?: string; location: Location }) => {
@@ -42,18 +43,16 @@ export const issueService = {
     return mockDb.issues.filter(issue => {
       if (issue.status === 'Resolved' || issue.status === 'Flagged') return false;
 
-      // Check location proximity (roughly within 500m)
       const latDiff = Math.abs(issue.location.lat - location.lat);
       const lngDiff = Math.abs(issue.location.lng - location.lng);
       const isNear = latDiff < 0.005 && lngDiff < 0.005;
 
       if (!isNear) return false;
 
-      // Check keyword overlap
       const issueText = (issue.title + " " + issue.description).toLowerCase();
       const matchCount = keywords.filter(kw => issueText.includes(kw)).length;
       
-      return matchCount >= 2; // At least 2 keywords match in a nearby area
+      return matchCount >= 2;
     });
   },
 
@@ -65,7 +64,6 @@ export const issueService = {
     const index = issue.upvotes.indexOf(userId);
     if (index === -1) {
       issue.upvotes.push(userId);
-      // Increase priority based on community support
       if (issue.upvotes.length >= 5 && issue.priority !== 'High') {
         issue.priority = 'High';
       } else if (issue.upvotes.length >= 2 && issue.priority === 'Low') {
@@ -75,50 +73,6 @@ export const issueService = {
       issue.upvotes.splice(index, 1);
     }
     
-    mockDb.save();
-    return issue;
-  },
-
-  toggleReport: (issueId: string, userId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-
-    if (!issue.reports) issue.reports = [];
-    const index = issue.reports.indexOf(userId);
-    if (index === -1) {
-      issue.reports.push(userId);
-    } else {
-      issue.reports.splice(index, 1);
-    }
-    
-    mockDb.save();
-    return issue;
-  },
-
-  addComment: (issueId: string, userId: string, userName: string, text: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-
-    const newComment: Comment = {
-      id: Math.random().toString(36).substr(2, 9),
-      userId,
-      userName,
-      text,
-      timestamp: new Date().toISOString()
-    };
-
-    if (!issue.comments) issue.comments = [];
-    issue.comments.push(newComment);
-    mockDb.save();
-    return issue;
-  },
-
-  deleteComment: (issueId: string, commentId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-
-    if (!issue.comments) issue.comments = [];
-    issue.comments = issue.comments.filter(c => c.id !== commentId);
     mockDb.save();
     return issue;
   },
@@ -137,6 +91,8 @@ export const issueService = {
       if (citizen) {
         citizen.points = (citizen.points || 0) + 10;
       }
+      // Send notification to citizen
+      notificationService.sendResolutionMessage(issue.citizenId, issue.id, issue.title);
     }
     
     if (!issue.statusHistory) issue.statusHistory = [];
@@ -144,6 +100,27 @@ export const issueService = {
       status,
       timestamp: new Date().toISOString(),
       updatedBy: adminId
+    });
+
+    mockDb.save();
+    return issue;
+  },
+
+  reissueIssue: (issueId: string, citizenId: string, note: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue || issue.citizenId !== citizenId) return;
+
+    issue.status = 'Pending';
+    issue.priority = 'High';
+    issue.isReissued = true;
+    issue.updatedAt = new Date().toISOString();
+    
+    if (!issue.statusHistory) issue.statusHistory = [];
+    issue.statusHistory.push({
+      status: 'Pending',
+      timestamp: new Date().toISOString(),
+      updatedBy: 'Citizen (Re-issued)',
+      note: note || 'Citizen reported that the issue persists after resolution.'
     });
 
     mockDb.save();
@@ -168,60 +145,6 @@ export const issueService = {
 
     mockDb.save();
     return issue;
-  },
-
-  raiseSevereAlert: (issueId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-    issue.isSevereAlert = true;
-    issue.priority = 'High';
-    mockDb.save();
-    return issue;
-  },
-
-  dismissSevereAlert: (issueId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-    issue.isSevereAlert = false;
-    mockDb.save();
-    return issue;
-  },
-
-  confirmReport: (issueId: string, adminId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-
-    const creator = mockDb.users.find(u => u.id === issue.citizenId);
-    if (creator) {
-      creator.points = Math.max(0, (creator.points || 0) - 1);
-    }
-
-    issue.status = 'Flagged';
-    if (!issue.statusHistory) issue.statusHistory = [];
-    issue.statusHistory.push({
-      status: 'Flagged',
-      timestamp: new Date().toISOString(),
-      updatedBy: adminId,
-      note: 'Issue confirmed as invalid/fake by admin.'
-    });
-
-    mockDb.save();
-  },
-
-  dismissReports: (issueId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-
-    issue.reports = [];
-    mockDb.save();
-  },
-
-  markAsNotified: (issueId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (issue) {
-      issue.notified = true;
-      mockDb.save();
-    }
   },
 
   assignIssue: (issueId: string, department: string, workerId?: string) => {
@@ -253,5 +176,49 @@ export const issueService = {
       const distance = R * c;
       return distance <= radiusKm;
     });
+  },
+
+  toggleReport: (issueId: string, userId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+    if (!issue.reports) issue.reports = [];
+    const index = issue.reports.indexOf(userId);
+    if (index === -1) issue.reports.push(userId);
+    else issue.reports.splice(index, 1);
+    mockDb.save();
+    return issue;
+  },
+
+  addComment: (issueId: string, userId: string, userName: string, text: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+    const newComment: Comment = {
+      id: Math.random().toString(36).substr(2, 9),
+      userId,
+      userName,
+      text,
+      timestamp: new Date().toISOString()
+    };
+    if (!issue.comments) issue.comments = [];
+    issue.comments.push(newComment);
+    mockDb.save();
+    return issue;
+  },
+
+  deleteComment: (issueId: string, commentId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) return;
+    if (!issue.comments) issue.comments = [];
+    issue.comments = issue.comments.filter(c => c.id !== commentId);
+    mockDb.save();
+    return issue;
+  },
+
+  markAsNotified: (issueId: string) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (issue) {
+      issue.notified = true;
+      mockDb.save();
+    }
   }
 };

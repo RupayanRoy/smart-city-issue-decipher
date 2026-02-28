@@ -3,6 +3,7 @@
 import React from 'react';
 import { Heart, Bell, LogOut, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { notificationService } from '@/backend/services/notificationService';
 
 interface PortalHeaderProps {
   user: any;
@@ -10,6 +11,8 @@ interface PortalHeaderProps {
 }
 
 const PortalHeader: React.FC<PortalHeaderProps> = ({ user, onLogout }) => {
+  const unreadCount = user ? notificationService.getUnreadCount(user.id) : 0;
+
   return (
     <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -33,9 +36,16 @@ const PortalHeader: React.FC<PortalHeaderProps> = ({ user, onLogout }) => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100">
-              <Bell className="w-5 h-5 text-slate-500" />
-            </Button>
+            <div className="relative">
+              <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100">
+                <Bell className="w-5 h-5 text-slate-500" />
+              </Button>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
             <div className="h-10 w-px bg-slate-100" />
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
