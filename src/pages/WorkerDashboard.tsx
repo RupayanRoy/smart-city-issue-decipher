@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { showSuccess, showError } from '@/utils/toast';
+import { cn } from '@/lib/utils';
 import { 
   HardHat, MapPin, Clock, CheckCircle, Camera, LogOut, 
   ClipboardList, Navigation, Activity, ShieldCheck, 
@@ -210,17 +211,40 @@ const WorkerDashboard = () => {
                     <p className="text-slate-300 text-sm font-medium leading-relaxed">{selectedTask.description}</p>
                   </div>
                   
-                  <div className="bg-slate-800/30 p-5 rounded-3xl border border-slate-700/30 space-y-4">
-                    <Label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Safety Protocol</Label>
-                    <div className="space-y-3">
-                      {['ppe', 'areaCordoned', 'toolsInspected', 'powerIsolated'].map((id) => (
-                        <div key={id} className="flex items-center space-x-3">
+                  <div className="bg-slate-800/30 p-6 rounded-3xl border border-slate-700/30 space-y-4">
+                    <Label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Safety Protocol Checklist</Label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {[
+                        { id: 'ppe', label: 'Personal Protective Equipment' },
+                        { id: 'areaCordoned', label: 'Area Cordoned Off' },
+                        { id: 'toolsInspected', label: 'Tools & Equipment Inspected' },
+                        { id: 'powerIsolated', label: 'Power/Utility Isolated' }
+                      ].map((item) => (
+                        <div 
+                          key={item.id} 
+                          className={cn(
+                            "flex items-center space-x-3 p-4 rounded-2xl border transition-all cursor-pointer",
+                            (safetyChecklist as any)[item.id] 
+                              ? "bg-emerald-500/10 border-emerald-500/50" 
+                              : "bg-slate-900/50 border-slate-800 hover:border-slate-700"
+                          )}
+                          onClick={() => setSafetyChecklist(prev => ({ ...prev, [item.id]: !(prev as any)[item.id] }))}
+                        >
                           <Checkbox 
-                            id={id} 
-                            checked={(safetyChecklist as any)[id]}
-                            onCheckedChange={(checked) => setSafetyChecklist(prev => ({ ...prev, [id]: !!checked }))}
+                            id={item.id} 
+                            checked={(safetyChecklist as any)[item.id]}
+                            onCheckedChange={(checked) => setSafetyChecklist(prev => ({ ...prev, [item.id]: !!checked }))}
+                            className="border-slate-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 h-5 w-5 rounded-md"
                           />
-                          <label htmlFor={id} className="text-xs font-bold text-slate-400 cursor-pointer">{id.toUpperCase()}</label>
+                          <label 
+                            htmlFor={item.id} 
+                            className={cn(
+                              "text-xs font-black cursor-pointer transition-colors uppercase tracking-wider",
+                              (safetyChecklist as any)[item.id] ? "text-emerald-400" : "text-slate-400"
+                            )}
+                          >
+                            {item.label}
+                          </label>
                         </div>
                       ))}
                     </div>
