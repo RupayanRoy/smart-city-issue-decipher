@@ -15,7 +15,7 @@ import {
   HardHat, MapPin, Clock, CheckCircle, Camera, LogOut, 
   ClipboardList, Navigation, Activity, ShieldCheck, 
   Wrench, Zap, AlertTriangle, Thermometer, Signal,
-  Timer, Briefcase, UserCheck, Code2
+  Timer, Briefcase, UserCheck, Code2, X
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 
@@ -35,6 +35,7 @@ const WorkerDashboard = () => {
   });
   
   const timerRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -80,7 +81,10 @@ const WorkerDashboard = () => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setCompletionImageUrl(reader.result as string);
+      reader.onloadend = () => {
+        setCompletionImageUrl(reader.result as string);
+        showSuccess("Photo attached successfully.");
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -259,12 +263,39 @@ const WorkerDashboard = () => {
                       onChange={e => setReportNotes(e.target.value)}
                       disabled={!isClockedIn}
                     />
-                    <Button type="button" variant="outline" className="w-full rounded-2xl h-16 border-dashed border-2" disabled={!isClockedIn} asChild>
-                      <label className="cursor-pointer flex items-center justify-center">
-                        <Camera className="mr-2 w-5 h-5" /> UPLOAD PHOTO
-                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                      </label>
-                    </Button>
+                    
+                    {completionImageUrl && (
+                      <div className="relative w-full h-48 rounded-2xl overflow-hidden border-2 border-slate-700 group">
+                        <img src={completionImageUrl} alt="Completion" className="w-full h-full object-cover" />
+                        <button 
+                          type="button" 
+                          onClick={() => setCompletionImageUrl('')}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="relative">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        ref={fileInputRef}
+                        onChange={handleImageUpload} 
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="w-full rounded-2xl h-16 border-dashed border-2 border-slate-700 hover:border-amber-500 hover:bg-amber-500/5" 
+                        disabled={!isClockedIn}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Camera className="mr-2 w-5 h-5" /> {completionImageUrl ? 'CHANGE PHOTO' : 'UPLOAD PHOTO'}
+                      </Button>
+                    </div>
+
                     <Button type="submit" className="w-full h-16 rounded-2xl font-black text-lg bg-emerald-600 hover:bg-emerald-700" disabled={!isClockedIn}>
                       SUBMIT MISSION
                     </Button>
