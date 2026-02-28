@@ -73,6 +73,7 @@ const ManualReportForm: React.FC<ManualReportFormProps> = ({
                     required 
                     value={data.address} 
                     onChange={e => onChange({...data, address: e.target.value})} 
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), onLocate?.())}
                     placeholder="Street address or landmark" 
                     className="rounded-2xl h-14 border-slate-200 flex-1" 
                   />

@@ -304,7 +304,11 @@ const CitizenPortal = () => {
 
         {showManualForm && (
           <ManualReportForm 
-            data={manualData} onClose={() => setShowManualForm(false)} onChange={setManualData} onSubmit={handleManualSubmit}
+            data={manualData} 
+            onClose={() => setShowManualForm(false)} 
+            onChange={setManualData} 
+            onSubmit={handleManualSubmit}
+            onLocate={handleManualGeocode}
             onImageUpload={(e) => {
               const file = e.target.files?.[0];
               if (file) {
