@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Heart, Shield, Zap, Users, ArrowRight, Globe, CheckCircle2 } from 'lucide-react';
 import Footer from '@/components/Footer';
 
