@@ -1,16 +1,19 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Heart } from 'lucide-react';
+import { Heart, Shield, User, HardHat } from 'lucide-react';
 import Footer from '@/components/Footer';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const Login = () => {
   const navigate = useNavigate();
+  const [role, setRole] = useState<'citizen' | 'worker'>('citizen');
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -49,9 +52,32 @@ const Login = () => {
         <Card className="w-full max-w-md shadow-2xl shadow-emerald-100/50 border-none rounded-3xl overflow-hidden">
           <CardHeader className="bg-slate-900 text-white text-center py-8">
             <CardTitle className="text-xl">Join the Movement</CardTitle>
-            <CardDescription className="text-slate-400">Sign in to start making an impact</CardDescription>
+            <CardDescription className="text-slate-400">Sign in or create an account</CardDescription>
           </CardHeader>
-          <CardContent className="p-8">
+          <CardContent className="p-8 space-y-6">
+            <div className="space-y-4">
+              <Label className="text-sm font-bold text-slate-700">I am registering as a:</Label>
+              <RadioGroup 
+                defaultValue="citizen" 
+                onValueChange={(v) => setRole(v as 'citizen' | 'worker')}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1 cursor-pointer hover:bg-emerald-50 transition-colors">
+                  <RadioGroupItem value="citizen" id="citizen" />
+                  <Label htmlFor="citizen" className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                    <User className="w-4 h-4" /> Citizen
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1 cursor-pointer hover:bg-amber-50 transition-colors">
+                  <RadioGroupItem value="worker" id="worker" />
+                  <Label htmlFor="worker" className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                    <HardHat className="w-4 h-4" /> Worker
+                  </Label>
+                </div>
+              </RadioGroup>
+              <p className="text-[10px] text-slate-400 italic">* Role selection only applies to new registrations.</p>
+            </div>
+
             <Auth
               supabaseClient={supabase}
               appearance={{ 
@@ -67,7 +93,22 @@ const Login = () => {
               }}
               providers={[]}
               theme="light"
+              additionalData={{
+                role: role
+              }}
             />
+
+            <div className="pt-6 border-t border-slate-100">
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center gap-2 text-amber-700 font-black text-xs uppercase tracking-widest">
+                  <Shield className="w-4 h-4" /> Hackathon Admin Access
+                </div>
+                <div className="text-sm space-y-1">
+                  <p className="text-slate-600 font-medium">Email: <span className="font-bold text-slate-900">admin@smartcity.gov</span></p>
+                  <p className="text-slate-600 font-medium">Password: <span className="font-bold text-slate-900">password123</span></p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
