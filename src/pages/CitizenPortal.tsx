@@ -7,12 +7,13 @@ import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { aiService, ChatMessage } from '@/backend/services/aiService';
 import { notificationService } from '@/backend/services/notificationService';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { Search, HandHelping, Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle, MapPin, ClipboardList } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { uploadToCloudinary } from '@/utils/cloudinary';
 
 // Modular Components
 import PortalHeader from '@/components/citizen/PortalHeader';
@@ -289,15 +290,20 @@ const CitizenPortal = () => {
           <AIAgentTerminal 
             messages={aiMessages} step={aiStep} input={aiInput} data={aiData} isGeocoding={isGeocoding} chatEndRef={chatEndRef}
             onClose={() => setShowAIAgent(false)} onInputChange={setAiInput} onSubmit={handleAISubmit} onConfirm={handleAIConfirm}
-            onFileUpload={(e, type) => {
+            onFileUpload={async (e, type) => {
               const file = e.target.files?.[0];
               if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  setAiData(prev => ({ ...prev, [type === 'image' ? 'imageUrl' : 'videoUrl']: reader.result as string }));
+                const tid = showLoading(`Uploading ${type}...`);
+                try {
+                  const url = await uploadToCloudinary(file, type);
+                  setAiData(prev => ({ ...prev, [type === 'image' ? 'imageUrl' : 'videoUrl']: url }));
                   setAiMessages(prev => [...prev, { role: 'user', text: `Uploaded a ${type}.` }]);
-                };
-                reader.readAsDataURL(file);
+                  showSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully!`);
+                } catch (err) {
+                  showError(`Failed to upload ${type}.`);
+                } finally {
+                  dismissToast(tid);
+                }
               }
             }}
           />
@@ -310,12 +316,19 @@ const CitizenPortal = () => {
             onChange={setManualData} 
             onSubmit={handleManualSubmit}
             onLocate={handleManualGeocode}
-            onImageUpload={(e) => {
+            onImageUpload={async (e) => {
               const file = e.target.files?.[0];
               if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => setManualData(prev => ({ ...prev, imageUrl: reader.result as string }));
-                reader.readAsDataURL(file);
+                const tid = showLoading("Uploading image...");
+                try {
+                  const url = await uploadToCloudinary(file, 'image');
+                  setManualData(prev => ({ ...prev, imageUrl: url }));
+                  showSuccess("Image uploaded successfully!");
+                } catch (err) {
+                  showError("Failed to upload image.");
+                } finally {
+                  dismissToast(tid);
+                }
               }
             }}
             onMapChange={async (lat, lng) => {

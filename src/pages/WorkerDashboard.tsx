@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { 
   HardHat, MapPin, Clock, CheckCircle, Camera, LogOut, 
   ClipboardList, Navigation, Activity, ShieldCheck, 
@@ -17,12 +17,14 @@ import {
   Timer, BarChart3, Briefcase, UserCheck, Code2
 } from 'lucide-react';
 import Footer from '@/components/Footer';
+import { uploadToCloudinary } from '@/utils/cloudinary';
 
 const WorkerDashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [reportNotes, setReportNotes] = useState('');
+  const [completionImageUrl, setCompletionImageUrl] = useState('');
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [shiftTime, setShiftTime] = useState(0);
   const [safetyChecklist, setSafetyChecklist] = useState({
@@ -74,6 +76,22 @@ const WorkerDashboard = () => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const tid = showLoading("Uploading completion photo...");
+      try {
+        const url = await uploadToCloudinary(file, 'image');
+        setCompletionImageUrl(url);
+        showSuccess("Photo uploaded successfully!");
+      } catch (err) {
+        showError("Failed to upload photo.");
+      } finally {
+        dismissToast(tid);
+      }
+    }
+  };
+
   const handleSubmitReport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTask) return;
@@ -86,12 +104,14 @@ const WorkerDashboard = () => {
 
     issueService.submitWorkerReport(selectedTask.id, {
       submittedAt: new Date().toISOString(),
-      notes: reportNotes
+      notes: reportNotes,
+      imageUrl: completionImageUrl
     });
 
     showSuccess("Mission accomplished! Report sent for admin verification.");
     setSelectedTask(null);
     setReportNotes('');
+    setCompletionImageUrl('');
     setSafetyChecklist({ ppe: false, areaCordoned: false, toolsInspected: false, powerIsolated: false });
     refreshTasks(user.id);
   };
@@ -357,9 +377,19 @@ const WorkerDashboard = () => {
 
                       <div className="space-y-3">
                         <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Evidence Capture</Label>
-                        <Button type="button" variant="outline" className="w-full rounded-2xl h-16 border-dashed border-2 border-slate-700 bg-slate-900/50 text-slate-500 hover:text-white hover:border-slate-500 transition-all" disabled={!isClockedIn}>
-                          <Camera className="mr-2 w-5 h-5" /> UPLOAD COMPLETION PHOTO
-                        </Button>
+                        {completionImageUrl ? (
+                          <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500">
+                            <img src={completionImageUrl} className="w-full h-32 object-cover" />
+                            <button type="button" onClick={() => setCompletionImageUrl('')} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"><AlertTriangle className="w-4 h-4" /></button>
+                          </div>
+                        ) : (
+                          <Button type="button" variant="outline" className="w-full rounded-2xl h-16 border-dashed border-2 border-slate-700 bg-slate-900/50 text-slate-500 hover:text-white hover:border-slate-500 transition-all" disabled={!isClockedIn} asChild>
+                            <label className="cursor-pointer flex items-center justify-center">
+                              <Camera className="mr-2 w-5 h-5" /> UPLOAD COMPLETION PHOTO
+                              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                            </label>
+                          </Button>
+                        )}
                       </div>
 
                       {!isClockedIn ? (
