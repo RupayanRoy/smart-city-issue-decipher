@@ -14,7 +14,7 @@ import {
   HardHat, MapPin, Clock, CheckCircle, Camera, LogOut, 
   ClipboardList, Navigation, Activity, ShieldCheck, 
   Wrench, Zap, AlertTriangle, Thermometer, Signal,
-  Timer, BarChart3, Briefcase, UserCheck
+  Timer, BarChart3, Briefcase, UserCheck, Code2
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 
@@ -412,10 +412,13 @@ const WorkerDashboard = () => {
       
       <footer className="bg-slate-900/80 border-t border-slate-800 py-4 px-6">
         <div className="max-w-[1600px] mx-auto flex justify-between items-center text-[10px] font-black text-slate-600 uppercase tracking-widest">
-          <div className="flex gap-6">
+          <div className="flex gap-6 items-center">
             <span>System Status: Nominal</span>
-            <span>Encryption: AES-256</span>
-            <span>Location Tracking: Active</span>
+            <span className="w-1 h-1 bg-slate-800 rounded-full" />
+            <span className="flex items-center gap-1">
+              <Code2 className="w-3 h-3" />
+              Built by <span className="text-amber-500">Deploy & Pray</span>
+            </span>
           </div>
           <div className="flex gap-2 items-center">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />

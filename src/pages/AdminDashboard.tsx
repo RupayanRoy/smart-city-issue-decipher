@@ -20,7 +20,7 @@ import {
   Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, 
   Search, Activity, BarChart3, LayoutDashboard, Clock, Heart, Flag, 
   Megaphone, HardHat, ClipboardCheck, Zap, Globe, Server, ShieldAlert,
-  TrendingUp, Users, MessageSquare, Terminal
+  TrendingUp, Users, MessageSquare, Terminal, Code2
 } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 
@@ -459,10 +459,13 @@ const AdminDashboard = () => {
       {/* Tactical Footer */}
       <footer className="bg-slate-900/80 border-t border-slate-800 py-4 px-6">
         <div className="max-w-[1800px] mx-auto flex justify-between items-center text-[10px] font-black text-slate-600 uppercase tracking-widest">
-          <div className="flex gap-6">
+          <div className="flex gap-6 items-center">
             <span>System Status: Nominal</span>
-            <span>Encryption: AES-256</span>
-            <span>Location Tracking: Active</span>
+            <span className="w-1 h-1 bg-slate-800 rounded-full" />
+            <span className="flex items-center gap-1">
+              <Code2 className="w-3 h-3" />
+              Built by <span className="text-emerald-500">Deploy & Pray</span>
+            </span>
           </div>
           <div className="flex gap-2 items-center">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
