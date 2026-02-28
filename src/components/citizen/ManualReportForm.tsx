@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { X, Camera } from 'lucide-react';
+import { X, Camera, MapPin, Search } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,10 +16,11 @@ interface ManualReportFormProps {
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onMapChange: (lat: number, lng: number) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onLocate?: () => void;
 }
 
 const ManualReportForm: React.FC<ManualReportFormProps> = ({
-  data, onClose, onChange, onImageUpload, onMapChange, onSubmit
+  data, onClose, onChange, onImageUpload, onMapChange, onSubmit, onLocate
 }) => {
   return (
     <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-[2rem] overflow-hidden animate-in fade-in slide-in-from-top-8 duration-500">
@@ -67,7 +68,23 @@ const ManualReportForm: React.FC<ManualReportFormProps> = ({
 
               <div className="space-y-2">
                 <Label className="text-slate-700 font-bold ml-1">Location</Label>
-                <Input required value={data.address} onChange={e => onChange({...data, address: e.target.value})} placeholder="Street address or landmark" className="rounded-2xl h-14 border-slate-200" />
+                <div className="flex gap-2">
+                  <Input 
+                    required 
+                    value={data.address} 
+                    onChange={e => onChange({...data, address: e.target.value})} 
+                    placeholder="Street address or landmark" 
+                    className="rounded-2xl h-14 border-slate-200 flex-1" 
+                  />
+                  <Button 
+                    type="button" 
+                    onClick={onLocate} 
+                    className="h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 px-6"
+                    title="Locate on map"
+                  >
+                    <Search className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
             </div>
             <div className="space-y-4">

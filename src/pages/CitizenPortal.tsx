@@ -7,8 +7,8 @@ import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { aiService, ChatMessage } from '@/backend/services/aiService';
 import { notificationService } from '@/backend/services/notificationService';
-import { showSuccess } from '@/utils/toast';
-import { Search, HandHelping, Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { showSuccess, showError } from '@/utils/toast';
+import { Search, HandHelping, Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle, MapPin } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,9 @@ const CitizenPortal = () => {
   const [similarIssues, setSimilarIssues] = useState<any[]>([]);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [pendingSubmission, setPendingSubmission] = useState<any>(null);
+
+  // Map state
+  const [mapCenter, setMapCenter] = useState<[number, number]>([12.8406, 80.1534]);
 
   const [manualData, setManualData] = useState({
     title: '', description: '', address: '', lat: 12.8406, lng: 80.1534, imageUrl: ''
@@ -75,15 +78,39 @@ const CitizenPortal = () => {
   }, []);
 
   const refreshData = (userId: string) => {
-    // Update my issues
-    setMyIssues(mockDb.issues.filter(i => i.citizenId === userId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    
-    // Update nearby issues (showing all for demo purposes, sorted by newest first)
     const allIssues = [...mockDb.issues].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setNearbyIssues(allIssues);
+    setMyIssues(mockDb.issues.filter(i => i.citizenId === userId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    
+    if (allIssues.length > 0) {
+      setMapCenter([allIssues[0].location.lat, allIssues[0].location.lng]);
+    }
     
     const dbUser = mockDb.users.find(u => u.id === userId);
     if (dbUser) setUser(dbUser);
+  };
+
+  const handleManualGeocode = async () => {
+    if (!manualData.address.trim()) return;
+    setIsGeocoding(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(manualData.address)}`);
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon, display_name } = data[0];
+        const newLat = parseFloat(lat);
+        const newLng = parseFloat(lon);
+        setManualData(prev => ({ ...prev, address: display_name, lat: newLat, lng: newLng }));
+        setMapCenter([newLat, newLng]);
+        showSuccess("Location found and pinned on map.");
+      } else {
+        showError("Could not find that location. Please try a different address.");
+      }
+    } catch (e) {
+      showError("Geocoding service unavailable.");
+    } finally {
+      setIsGeocoding(false);
+    }
   };
 
   const handleUpvote = (issueId: string) => {
@@ -159,7 +186,10 @@ const CitizenPortal = () => {
           const data = await response.json();
           if (data && data.length > 0) {
             const { lat, lon, display_name } = data[0];
-            setAiData(prev => ({ ...prev, address: display_name, lat: parseFloat(lat), lng: parseFloat(lon) }));
+            const newLat = parseFloat(lat);
+            const newLng = parseFloat(lon);
+            setAiData(prev => ({ ...prev, address: display_name, lat: newLat, lng: newLng }));
+            setMapCenter([newLat, newLng]);
             setAiMessages(prev => [...prev, { role: 'bot', text: `I've found the location: ${display_name}. Does everything look correct? I'm ready to submit.` }]);
             setAiStep('confirm');
             setIsGeocoding(false);
@@ -215,7 +245,6 @@ const CitizenPortal = () => {
     refreshData(user.id);
   };
 
-  // Enhanced search filter to include category and description
   const filteredNearbyIssues = nearbyIssues.filter(i => {
     const query = searchQuery.toLowerCase();
     const matchesSearch = 
@@ -286,6 +315,7 @@ const CitizenPortal = () => {
             }}
             onMapChange={async (lat, lng) => {
               setManualData(prev => ({ ...prev, lat, lng }));
+              setMapCenter([lat, lng]);
               setIsGeocoding(true);
               try {
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
@@ -331,7 +361,11 @@ const CitizenPortal = () => {
               <div className="space-y-6">
                 <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
                   <CardHeader className="p-6 border-b border-slate-50"><CardTitle className="text-lg font-black">City Pulse Map</CardTitle></CardHeader>
-                  <CardContent className="p-4"><div className="rounded-2xl overflow-hidden border-2 border-white shadow-lg h-[300px]"><IssueMapOverview issues={filteredNearbyIssues} /></div></CardContent>
+                  <CardContent className="p-4">
+                    <div className="rounded-2xl overflow-hidden border-2 border-white shadow-lg h-[300px]">
+                      <IssueMapOverview issues={filteredNearbyIssues} center={mapCenter} />
+                    </div>
+                  </CardContent>
                 </Card>
               </div>
             </div>

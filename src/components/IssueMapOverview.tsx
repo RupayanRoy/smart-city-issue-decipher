@@ -22,25 +22,26 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 interface IssueMapOverviewProps {
   issues: Issue[];
+  center?: [number, number];
 }
 
-// Component to handle map view updates when issues change
+// Component to handle map view updates when issues or center change
 const ChangeView = ({ center }: { center: [number, number] }) => {
   const map = useMap();
   useEffect(() => {
     map.setView(center, map.getZoom());
-  }, [center, map]);
+  }, [center[0], center[1], map]); // Use individual coordinates to avoid reference issues
   return null;
 };
 
-const IssueMapOverview: React.FC<IssueMapOverviewProps> = ({ issues }) => {
+const IssueMapOverview: React.FC<IssueMapOverviewProps> = ({ issues, center: externalCenter }) => {
   // Default to a central location if no issues exist
   const defaultCenter: [number, number] = [12.8406, 80.1534];
   
-  // Center on the most recent issue if available
-  const center: [number, number] = issues.length > 0 
-    ? [issues[0].location.lat, issues[0].location.lng] 
-    : defaultCenter;
+  // Use external center if provided, otherwise center on the most recent issue
+  const center: [number, number] = externalCenter 
+    ? externalCenter 
+    : (issues.length > 0 ? [issues[0].location.lat, issues[0].location.lng] : defaultCenter);
 
   return (
     <div className="h-full w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm z-0">
