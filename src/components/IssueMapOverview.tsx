@@ -1,42 +1,70 @@
 "use client";
 
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import { Issue } from '@/backend/types';
 import { Badge } from './ui/badge';
+
+// Fix for default marker icons in Leaflet
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+const DefaultIcon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface IssueMapOverviewProps {
   issues: Issue[];
 }
 
+// Component to handle map view updates when issues change
+const ChangeView = ({ center }: { center: [number, number] }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+  return null;
+};
+
 const IssueMapOverview: React.FC<IssueMapOverviewProps> = ({ issues }) => {
+  // Default to a central location if no issues exist
+  const defaultCenter: [number, number] = [12.8406, 80.1534];
+  
+  // Center on the most recent issue if available
   const center: [number, number] = issues.length > 0 
     ? [issues[0].location.lat, issues[0].location.lng] 
-    : [12.8406, 80.1534];
+    : defaultCenter;
 
   return (
-    <div className="h-[500px] w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm z-0">
+    <div className="h-full w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm z-0">
       <MapContainer 
         center={center} 
-        zoom={12} 
+        zoom={13} 
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <ChangeView center={center} />
         {issues.map(issue => (
           <Marker key={issue.id} position={[issue.location.lat, issue.location.lng]}>
             <Popup>
-              <div className="p-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-sm m-0">{issue.title}</h4>
-                  <Badge variant="outline" className="text-[10px] px-1 py-0">{issue.status}</Badge>
+              <div className="p-1 space-y-2 min-w-[150px]">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-bold text-sm m-0 truncate">{issue.title || issue.category}</h4>
+                  <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">{issue.status}</Badge>
                 </div>
                 <p className="text-xs text-slate-600 m-0 line-clamp-2">{issue.description}</p>
-                <div className="text-[10px] text-slate-400">
-                  {issue.location.address}
+                <div className="text-[10px] text-slate-400 font-bold uppercase border-t pt-1 mt-1">
+                  {issue.location.address.split(',')[0]}
                 </div>
               </div>
             </Popup>
