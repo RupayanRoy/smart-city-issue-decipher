@@ -1,4 +1,4 @@
-export type UserRole = 'citizen' | 'admin';
+export type UserRole = 'citizen' | 'admin' | 'worker';
 
 export interface User {
   id: string;
@@ -7,10 +7,11 @@ export interface User {
   role: UserRole;
   password?: string;
   points?: number;
+  department?: string;
 }
 
 export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Other';
-export type IssueStatus = 'Pending' | 'In Progress' | 'Resolved' | 'Flagged';
+export type IssueStatus = 'Pending' | 'In Progress' | 'Completed' | 'Resolved' | 'Flagged';
 export type IssuePriority = 'Low' | 'Medium' | 'High';
 
 export const DEPARTMENTS = [
@@ -42,9 +43,16 @@ export interface Location {
   lng: number;
 }
 
+export interface WorkerReport {
+  submittedAt: string;
+  notes: string;
+  imageUrl?: string;
+}
+
 export interface Issue {
   id: string;
   citizenId: string;
+  workerId?: string;
   title: string;
   description: string;
   imageUrl?: string;
@@ -64,6 +72,7 @@ export interface Issue {
   updatedAt: string;
   resolvedAt?: string;
   notified?: boolean;
+  workerReport?: WorkerReport;
 }
 
 export interface AnalyticsData {

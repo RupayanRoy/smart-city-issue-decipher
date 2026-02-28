@@ -33,7 +33,15 @@ if (!mockDb.users.find(u => u.role === 'admin')) {
   });
 }
 
-if (mockDb.users.length <= 1) {
+// Add Mock Workers
+if (!mockDb.users.find(u => u.role === 'worker')) {
+  mockDb.users.push(
+    { id: 'wrk-1', name: 'John Technician', email: 'john@citycare.gov', role: 'worker', password: 'password123', department: 'Public Works' },
+    { id: 'wrk-2', name: 'Sarah Electrician', email: 'sarah@citycare.gov', role: 'worker', password: 'password123', department: 'Electrical Grid' }
+  );
+}
+
+if (mockDb.users.length <= 4) {
   const mockCitizens = [
     { id: 'cit-1', name: 'Rupayan', email: 'rupayan@example.com', role: 'citizen' as const, password: 'password123', points: 15 },
     { id: 'cit-2', name: 'Priya Sharma', email: 'priya@example.com', role: 'citizen' as const, password: 'password123', points: 5 },
@@ -55,6 +63,7 @@ if (mockDb.issues.length === 0) {
       priority: 'High',
       location: { address: 'Vandalur-Kelambakkam Road, Chennai', lat: 12.8412, lng: 80.1538 },
       assignedTo: 'Public Works',
+      workerId: 'wrk-1',
       statusHistory: [
         { status: 'Pending', timestamp: new Date(now.getTime() - 86400000 * 2).toISOString(), updatedBy: 'System' },
         { status: 'In Progress', timestamp: new Date(now.getTime() - 86400000).toISOString(), updatedBy: 'System Admin' }

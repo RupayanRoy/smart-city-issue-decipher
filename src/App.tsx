@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import CitizenPortal from "./pages/CitizenPortal";
 import AdminDashboard from "./pages/AdminDashboard";
+import WorkerDashboard from "./pages/WorkerDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/citizen" element={<CitizenPortal />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/worker" element={<WorkerDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

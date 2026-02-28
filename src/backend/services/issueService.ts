@@ -1,5 +1,5 @@
 import { mockDb } from '../db';
-import { Issue, IssueCategory, IssuePriority, IssueStatus, Location, Comment } from '../types';
+import { Issue, IssueCategory, IssuePriority, IssueStatus, Location, Comment, WorkerReport } from '../types';
 import { aiService } from './aiService';
 
 export const issueService = {
@@ -110,7 +110,7 @@ export const issueService = {
     
     if (status === 'Resolved') {
       issue.resolvedAt = new Date().toISOString();
-      issue.isSevereAlert = false; // Clear alert on resolution
+      issue.isSevereAlert = false;
       const citizen = mockDb.users.find(u => u.id === issue.citizenId);
       if (citizen) {
         citizen.points = (citizen.points || 0) + 10;
@@ -122,6 +122,26 @@ export const issueService = {
       status,
       timestamp: new Date().toISOString(),
       updatedBy: adminId
+    });
+
+    mockDb.save();
+    return issue;
+  },
+
+  submitWorkerReport: (issueId: string, report: WorkerReport) => {
+    const issue = mockDb.issues.find(i => i.id === issueId);
+    if (!issue) throw new Error('Issue not found');
+
+    issue.status = 'Completed';
+    issue.workerReport = report;
+    issue.updatedAt = new Date().toISOString();
+    
+    if (!issue.statusHistory) issue.statusHistory = [];
+    issue.statusHistory.push({
+      status: 'Completed',
+      timestamp: new Date().toISOString(),
+      updatedBy: `Worker (ID: ${issue.workerId})`,
+      note: report.notes
     });
 
     mockDb.save();
@@ -182,11 +202,15 @@ export const issueService = {
     }
   },
 
-  assignIssue: (issueId: string, department: string) => {
+  assignIssue: (issueId: string, department: string, workerId?: string) => {
     const issue = mockDb.issues.find(i => i.id === issueId);
     if (!issue) throw new Error('Issue not found');
     
     issue.assignedTo = department;
+    if (workerId) {
+      issue.workerId = workerId;
+      issue.status = 'In Progress';
+    }
     issue.updatedAt = new Date().toISOString();
     mockDb.save();
     return issue;

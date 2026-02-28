@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockDb } from '@/backend/db';
 import { showSuccess, showError } from '@/utils/toast';
-import { Heart, Shield, User as UserIcon, Info, Globe } from 'lucide-react';
+import { Heart, Shield, User as UserIcon, Info, HardHat } from 'lucide-react';
 import Footer from '@/components/Footer';
 
 const Login = () => {
@@ -16,12 +16,14 @@ const Login = () => {
   const [name, setName] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (role: 'citizen' | 'admin') => {
+  const handleLogin = (role: 'citizen' | 'admin' | 'worker') => {
     const user = mockDb.users.find(u => u.email === email && u.role === role);
     if (user) {
       localStorage.setItem('current_user', JSON.stringify(user));
       showSuccess(`Welcome back, ${user.name}!`);
-      navigate(role === 'admin' ? '/admin' : '/citizen');
+      if (role === 'admin') navigate('/admin');
+      else if (role === 'worker') navigate('/worker');
+      else navigate('/citizen');
     } else {
       showError('Invalid credentials');
     }
@@ -90,12 +92,15 @@ const Login = () => {
                     className="rounded-xl border-slate-200 focus:ring-emerald-500 h-12"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-4">
-                  <Button onClick={() => handleLogin('citizen')} variant="outline" className="w-full rounded-xl h-12 border-2 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all">
-                    <UserIcon className="mr-2 w-4 h-4" /> Citizen
+                <div className="grid grid-cols-3 gap-2 pt-4">
+                  <Button onClick={() => handleLogin('citizen')} variant="outline" className="w-full rounded-xl h-12 border-2 text-[10px] px-1">
+                    <UserIcon className="mr-1 w-3 h-3" /> Citizen
                   </Button>
-                  <Button onClick={() => handleLogin('admin')} className="w-full rounded-xl h-12 bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-200 transition-all">
-                    <Shield className="mr-2 w-4 h-4" /> Admin
+                  <Button onClick={() => handleLogin('worker')} variant="outline" className="w-full rounded-xl h-12 border-2 text-[10px] px-1">
+                    <HardHat className="mr-1 w-3 h-3" /> Worker
+                  </Button>
+                  <Button onClick={() => handleLogin('admin')} className="w-full rounded-xl h-12 bg-slate-900 hover:bg-slate-800 text-[10px] px-1">
+                    <Shield className="mr-1 w-3 h-3" /> Admin
                   </Button>
                 </div>
               </TabsContent>
@@ -124,16 +129,18 @@ const Login = () => {
             <Info className="w-4 h-4" />
             Quick Access for Testing
           </div>
-          <div className="grid grid-cols-2 gap-6 text-[11px]">
-            <div className="space-y-1.5">
-              <p className="font-bold text-slate-800 uppercase tracking-wider">Admin Portal</p>
-              <p className="text-slate-500">User: <span className="font-mono font-bold text-slate-700">admin@smartcity.gov</span></p>
-              <p className="text-slate-500">Pass: <span className="font-mono font-bold text-slate-700">password123</span></p>
+          <div className="grid grid-cols-3 gap-4 text-[10px]">
+            <div className="space-y-1">
+              <p className="font-bold text-slate-800 uppercase">Admin</p>
+              <p className="text-slate-500">admin@smartcity.gov</p>
             </div>
-            <div className="space-y-1.5">
-              <p className="font-bold text-slate-800 uppercase tracking-wider">Citizen Portal</p>
-              <p className="text-slate-500">User: <span className="font-mono font-bold text-slate-700">rupayan@example.com</span></p>
-              <p className="text-slate-500">Pass: <span className="font-mono font-bold text-slate-700">password123</span></p>
+            <div className="space-y-1">
+              <p className="font-bold text-slate-800 uppercase">Worker</p>
+              <p className="text-slate-500">john@citycare.gov</p>
+            </div>
+            <div className="space-y-1">
+              <p className="font-bold text-slate-800 uppercase">Citizen</p>
+              <p className="text-slate-500">rupayan@example.com</p>
             </div>
           </div>
         </div>
