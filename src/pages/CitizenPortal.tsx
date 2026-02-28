@@ -75,9 +75,13 @@ const CitizenPortal = () => {
   }, []);
 
   const refreshData = (userId: string) => {
-    setMyIssues(mockDb.issues.filter(i => i.citizenId === userId));
-    const nearby = issueService.getIssuesByRadius(12.8406, 80.1534, 5);
-    setNearbyIssues(nearby.sort((a, b) => (b.upvotes?.length || 0) - (a.upvotes?.length || 0)));
+    // Update my issues
+    setMyIssues(mockDb.issues.filter(i => i.citizenId === userId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    
+    // Update nearby issues (showing all for demo purposes, sorted by newest first)
+    const allIssues = [...mockDb.issues].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    setNearbyIssues(allIssues);
+    
     const dbUser = mockDb.users.find(u => u.id === userId);
     if (dbUser) setUser(dbUser);
   };
@@ -211,6 +215,18 @@ const CitizenPortal = () => {
     refreshData(user.id);
   };
 
+  // Enhanced search filter to include category and description
+  const filteredNearbyIssues = nearbyIssues.filter(i => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = 
+      i.title.toLowerCase().includes(query) || 
+      i.description.toLowerCase().includes(query) || 
+      i.category.toLowerCase().includes(query) ||
+      i.location.address.toLowerCase().includes(query);
+    
+    return matchesSearch && i.status !== 'Flagged';
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       <DuplicateDetectionDialog 
@@ -295,22 +311,27 @@ const CitizenPortal = () => {
               <div className="lg:col-span-2 space-y-6">
                 <div className="relative w-full">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <Input placeholder="Search community reports..." className="pl-12 h-12 rounded-2xl border-slate-200 bg-white shadow-sm" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                  <Input placeholder="Search by title, category, or description..." className="pl-12 h-12 rounded-2xl border-slate-200 bg-white shadow-sm" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                 </div>
                 <div className="grid grid-cols-1 gap-6">
-                  {nearbyIssues.filter(i => i.title.toLowerCase().includes(searchQuery.toLowerCase()) && i.status !== 'Flagged').map(issue => (
+                  {filteredNearbyIssues.map(issue => (
                     <IssueCard 
                       key={issue.id} issue={issue} user={user} commentText={commentText[issue.id] || ''}
                       onUpvote={handleUpvote} onReport={handleReport} onAddComment={handleAddComment} onDeleteComment={handleDeleteComment}
                       onCommentChange={(id, text) => setCommentText(prev => ({ ...prev, [id]: text }))}
                     />
                   ))}
+                  {filteredNearbyIssues.length === 0 && (
+                    <div className="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-slate-100">
+                      <p className="text-slate-400 font-bold">No reports found matching your search.</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="space-y-6">
                 <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
                   <CardHeader className="p-6 border-b border-slate-50"><CardTitle className="text-lg font-black">City Pulse Map</CardTitle></CardHeader>
-                  <CardContent className="p-4"><div className="rounded-2xl overflow-hidden border-2 border-white shadow-lg h-[300px]"><IssueMapOverview issues={nearbyIssues.filter(i => i.status !== 'Flagged')} /></div></CardContent>
+                  <CardContent className="p-4"><div className="rounded-2xl overflow-hidden border-2 border-white shadow-lg h-[300px]"><IssueMapOverview issues={filteredNearbyIssues} /></div></CardContent>
                 </Card>
               </div>
             </div>
