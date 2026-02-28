@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Heart, Shield, User, HardHat, Lock, UserCircle } from 'lucide-react';
+import { Heart, Shield, User, HardHat, Lock, UserCircle, Info } from 'lucide-react';
 import Footer from '@/components/Footer';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -33,7 +33,7 @@ const Login = () => {
         else if (user.role === 'worker') navigate('/worker');
         else navigate('/citizen');
       } else {
-        showError("Invalid credentials. Try admin@smartcity.gov / password123");
+        showError("Invalid credentials. Check the demo list below.");
       }
     } else {
       const newUser = {
@@ -52,6 +52,11 @@ const Login = () => {
     }
   };
 
+  const fillCredentials = (e: string, p: string) => {
+    setEmail(e);
+    setPassword(p);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50 via-white to-sky-50">
       <div className="flex-1 flex flex-col items-center justify-center p-4 space-y-8">
@@ -63,115 +68,166 @@ const Login = () => {
           <p className="text-slate-500 font-medium">Empowering citizens to build a better, safer, and cleaner society together.</p>
         </div>
 
-        <Card className="w-full max-w-md shadow-2xl shadow-emerald-100/50 border-none rounded-3xl overflow-hidden">
-          <CardHeader className="bg-slate-900 text-white text-center py-8">
-            <CardTitle className="text-xl">{isLogin ? 'Welcome Back' : 'Join the Movement'}</CardTitle>
-            <CardDescription className="text-slate-400">
-              {isLogin ? 'Sign in to your account' : 'Create your citizen or worker account'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-8 space-y-6">
-            <form onSubmit={handleAuth} className="space-y-4">
-              {!isLogin && (
-                <div className="space-y-4 mb-6">
-                  <Label className="text-sm font-bold text-slate-700">I am registering as a:</Label>
-                  <RadioGroup 
-                    defaultValue="citizen" 
-                    onValueChange={(v) => setRole(v as 'citizen' | 'worker')}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1 cursor-pointer hover:bg-emerald-50 transition-colors">
-                      <RadioGroupItem value="citizen" id="citizen" />
-                      <Label htmlFor="citizen" className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
-                        <User className="w-4 h-4" /> Citizen
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1 cursor-pointer hover:bg-amber-50 transition-colors">
-                      <RadioGroupItem value="worker" id="worker" />
-                      <Label htmlFor="worker" className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
-                        <HardHat className="w-4 h-4" /> Worker
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
+        <div className="grid lg:grid-cols-2 gap-8 w-full max-w-5xl items-start">
+          <Card className="shadow-2xl shadow-emerald-100/50 border-none rounded-3xl overflow-hidden">
+            <CardHeader className="bg-slate-900 text-white text-center py-8">
+              <CardTitle className="text-xl">{isLogin ? 'Welcome Back' : 'Join the Movement'}</CardTitle>
+              <CardDescription className="text-slate-400">
+                {isLogin ? 'Sign in to your account' : 'Create your citizen or worker account'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <form onSubmit={handleAuth} className="space-y-4">
+                {!isLogin && (
+                  <div className="space-y-4 mb-6">
+                    <Label className="text-sm font-bold text-slate-700">I am registering as a:</Label>
+                    <RadioGroup 
+                      defaultValue="citizen" 
+                      onValueChange={(v) => setRole(v as 'citizen' | 'worker')}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1 cursor-pointer hover:bg-emerald-50 transition-colors">
+                        <RadioGroupItem value="citizen" id="citizen" />
+                        <Label htmlFor="citizen" className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                          <User className="w-4 h-4" /> Citizen
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1 cursor-pointer hover:bg-amber-50 transition-colors">
+                        <RadioGroupItem value="worker" id="worker" />
+                        <Label htmlFor="worker" className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                          <HardHat className="w-4 h-4" /> Worker
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
 
-              {!isLogin && (
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <div className="relative">
+                      <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Input 
+                        id="name"
+                        placeholder="Your Name" 
+                        className="pl-10 rounded-xl h-12"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required={!isLogin}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="email">Email Address</Label>
                   <div className="relative">
-                    <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <Input 
-                      id="name"
-                      placeholder="Your Name" 
+                      id="email"
+                      type="email"
+                      placeholder="name@example.com" 
                       className="pl-10 rounded-xl h-12"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required={!isLogin}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
                     />
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <Input 
-                    id="email"
-                    type="email"
-                    placeholder="name@example.com" 
-                    className="pl-10 rounded-xl h-12"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Input 
+                      id="password"
+                      type="password"
+                      placeholder="••••••••" 
+                      className="pl-10 rounded-xl h-12"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold text-lg">
+                  {isLogin ? 'Sign In' : 'Create Account'}
+                </Button>
+              </form>
+
+              <div className="text-center">
+                <button 
+                  onClick={() => setIsLogin(!isLogin)} 
+                  className="text-sm font-bold text-emerald-600 hover:underline"
+                >
+                  {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
+              <div className="flex items-center gap-2 text-slate-900 font-black text-sm uppercase tracking-widest">
+                <Info className="w-5 h-5 text-emerald-600" /> Demo Credentials
+              </div>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Administrator</p>
+                  <button 
+                    onClick={() => fillCredentials('admin@smartcity.gov', 'password123')}
+                    className="w-full text-left p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-emerald-500 transition-all group"
+                  >
+                    <p className="text-xs font-bold text-slate-700 group-hover:text-emerald-600">admin@smartcity.gov</p>
+                    <p className="text-[10px] text-slate-400">Password: password123</p>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Field Workers</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    <button 
+                      onClick={() => fillCredentials('john@citycare.gov', 'password123')}
+                      className="text-left p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-amber-500 transition-all group"
+                    >
+                      <p className="text-xs font-bold text-slate-700 group-hover:text-amber-600">john@citycare.gov</p>
+                      <p className="text-[10px] text-slate-400">Password: password123</p>
+                    </button>
+                    <button 
+                      onClick={() => fillCredentials('sarah@citycare.gov', 'password123')}
+                      className="text-left p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-amber-500 transition-all group"
+                    >
+                      <p className="text-xs font-bold text-slate-700 group-hover:text-amber-600">sarah@citycare.gov</p>
+                      <p className="text-[10px] text-slate-400">Password: password123</p>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Citizens</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    <button 
+                      onClick={() => fillCredentials('rupayan@example.com', 'password123')}
+                      className="text-left p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-emerald-500 transition-all group"
+                    >
+                      <p className="text-xs font-bold text-slate-700 group-hover:text-emerald-600">rupayan@example.com</p>
+                      <p className="text-[10px] text-slate-400">Password: password123</p>
+                    </button>
+                    <button 
+                      onClick={() => fillCredentials('priya@example.com', 'password123')}
+                      className="text-left p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-emerald-500 transition-all group"
+                    >
+                      <p className="text-xs font-bold text-slate-700 group-hover:text-emerald-600">priya@example.com</p>
+                      <p className="text-[10px] text-slate-400">Password: password123</p>
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <Input 
-                    id="password"
-                    type="password"
-                    placeholder="••••••••" 
-                    className="pl-10 rounded-xl h-12"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold text-lg">
-                {isLogin ? 'Sign In' : 'Create Account'}
-              </Button>
-            </form>
-
-            <div className="text-center">
-              <button 
-                onClick={() => setIsLogin(!isLogin)} 
-                className="text-sm font-bold text-emerald-600 hover:underline"
-              >
-                {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-              </button>
             </div>
-
-            <div className="pt-6 border-t border-slate-100">
-              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center gap-2 text-amber-700 font-black text-xs uppercase tracking-widest">
-                  <Shield className="w-4 h-4" /> Hackathon Admin Access
-                </div>
-                <div className="text-sm space-y-1">
-                  <p className="text-slate-600 font-medium">Email: <span className="font-bold text-slate-900">admin@smartcity.gov</span></p>
-                  <p className="text-slate-600 font-medium">Password: <span className="font-bold text-slate-900">password123</span></p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
       <Footer />
     </div>
