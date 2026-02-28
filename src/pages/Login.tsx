@@ -99,6 +99,7 @@ const Login = () => {
               </div>
               
               <div className="grid grid-cols-1 gap-3">
+                {/* Admin Demo */}
                 <button 
                   onClick={() => fillCredentials('admin@smartcity.gov', 'password123')}
                   className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-left"
@@ -115,28 +116,39 @@ const Login = () => {
                   <span className="text-[10px] font-black text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">SELECT</span>
                 </button>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => fillCredentials('john@citycare.gov', 'password123')}
-                    className="flex flex-col p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-amber-500 hover:bg-amber-50/30 transition-all group text-left"
-                  >
-                    <div className="bg-amber-500 w-8 h-8 rounded-xl flex items-center justify-center text-slate-900 mb-2">
+                {/* Worker Demo */}
+                <button 
+                  onClick={() => fillCredentials('john@citycare.gov', 'password123')}
+                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-amber-500 hover:bg-amber-50/30 transition-all group text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="bg-amber-500 p-2 rounded-xl text-slate-900">
                       <HardHat className="w-4 h-4" />
                     </div>
-                    <p className="text-[10px] font-black text-slate-900">Field Worker</p>
-                    <p className="text-[10px] font-bold text-slate-500 truncate">john@citycare.gov</p>
-                  </button>
-                  <button 
-                    onClick={() => fillCredentials('rupayan@example.com', 'password123')}
-                    className="flex flex-col p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-left"
-                  >
-                    <div className="bg-emerald-600 w-8 h-8 rounded-xl flex items-center justify-center text-white mb-2">
+                    <div>
+                      <p className="text-xs font-black text-slate-900">Field Worker</p>
+                      <p className="text-[10px] font-bold text-slate-500">john@citycare.gov</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black text-amber-600 opacity-0 group-hover:opacity-100 transition-opacity">SELECT</span>
+                </button>
+
+                {/* Citizen Demo */}
+                <button 
+                  onClick={() => fillCredentials('rupayan@example.com', 'password123')}
+                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="bg-emerald-600 p-2 rounded-xl text-white">
                       <UserCircle className="w-4 h-4" />
                     </div>
-                    <p className="text-[10px] font-black text-slate-900">Citizen Hero</p>
-                    <p className="text-[10px] font-bold text-slate-500 truncate">rupayan@example.com</p>
-                  </button>
-                </div>
+                    <div>
+                      <p className="text-xs font-black text-slate-900">Citizen Hero</p>
+                      <p className="text-[10px] font-bold text-slate-500">rupayan@example.com</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">SELECT</span>
+                </button>
               </div>
               <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Password for all: password123</p>
             </div>
