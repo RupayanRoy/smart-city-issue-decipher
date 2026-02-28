@@ -20,7 +20,7 @@ import {
   Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, 
   Search, Activity, BarChart3, LayoutDashboard, Clock, Heart, Flag, 
   Megaphone, HardHat, ClipboardCheck, Zap, Globe, Server, ShieldAlert,
-  TrendingUp, Users, MessageSquare, Terminal, Code2
+  TrendingUp, Users, MessageSquare, Terminal, Code2, Camera, Image as ImageIcon
 } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 
@@ -268,6 +268,30 @@ const AdminDashboard = () => {
                             <div className="flex items-center gap-2"><MapPin className="w-3 h-3 text-emerald-500" /> {issue.location.address.split(',')[0]}</div>
                             <div className="flex items-center gap-2"><Clock className="w-3 h-3 text-emerald-500" /> {new Date(issue.createdAt).toLocaleDateString()}</div>
                             <div className="flex items-center gap-2"><Users className="w-3 h-3 text-emerald-500" /> {issue.upvotes?.length || 0} SUPPORTERS</div>
+                          </div>
+
+                          {/* Visual Evidence Section */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                            {issue.imageUrl && (
+                              <div className="space-y-2">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                  <ImageIcon className="w-3 h-3" /> Citizen Evidence
+                                </p>
+                                <div className="aspect-video rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
+                                  <img src={issue.imageUrl} alt="Citizen Evidence" className="w-full h-full object-cover" />
+                                </div>
+                              </div>
+                            )}
+                            {issue.workerReport?.imageUrl && (
+                              <div className="space-y-2">
+                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                                  <Camera className="w-3 h-3" /> Worker Completion
+                                </p>
+                                <div className="aspect-video rounded-2xl overflow-hidden border border-emerald-500/20 bg-slate-950">
+                                  <img src={issue.workerReport.imageUrl} alt="Worker Completion" className="w-full h-full object-cover" />
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {issue.workerReport && (
