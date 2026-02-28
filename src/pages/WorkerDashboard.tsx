@@ -15,7 +15,7 @@ import {
   HardHat, MapPin, Clock, CheckCircle, Camera, LogOut, 
   ClipboardList, Navigation, Activity, ShieldCheck, 
   Wrench, Zap, AlertTriangle, Thermometer, Signal,
-  Timer, Briefcase, UserCheck, Code2, X
+  Timer, Briefcase, UserCheck, Code2, X, History
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 
@@ -113,6 +113,9 @@ const WorkerDashboard = () => {
     refreshTasks(user.id);
   };
 
+  const activeTasks = tasks.filter(t => t.status === 'In Progress' || t.status === 'Pending');
+  const completedTasks = tasks.filter(t => t.status === 'Completed');
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0F172A] text-slate-200">
       <header className="bg-slate-900/50 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
@@ -173,29 +176,73 @@ const WorkerDashboard = () => {
           </Card>
         </div>
 
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-lg font-black text-white flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-amber-500" /> Active Assignments
-            </h2>
-            <Badge className="bg-slate-800 text-slate-400 border-slate-700">{tasks.length} Tasks</Badge>
+        <div className="col-span-12 lg:col-span-4 space-y-8">
+          {/* Active Assignments Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-lg font-black text-white flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-amber-500" /> Active Assignments
+              </h2>
+              <Badge className="bg-slate-800 text-slate-400 border-slate-700">{activeTasks.length}</Badge>
+            </div>
+            
+            <div className="space-y-4 overflow-y-auto max-h-[40vh] pr-2 custom-scrollbar">
+              {activeTasks.length === 0 ? (
+                <div className="text-center py-10 bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-800">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No active tasks</p>
+                </div>
+              ) : (
+                activeTasks.map(task => (
+                  <Card 
+                    key={task.id} 
+                    className={`border-none shadow-xl rounded-3xl cursor-pointer transition-all duration-300 group ${selectedTask?.id === task.id ? 'bg-amber-500 ring-4 ring-amber-500/20' : 'bg-slate-900/80 hover:bg-slate-800'}`}
+                    onClick={() => setSelectedTask(task)}
+                  >
+                    <CardContent className="p-6 space-y-4">
+                      <Badge className={selectedTask?.id === task.id ? 'bg-slate-900 text-white' : task.priority === 'High' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400'}>
+                        {task.priority} PRIORITY
+                      </Badge>
+                      <h3 className={`font-black text-lg leading-tight ${selectedTask?.id === task.id ? 'text-slate-900' : 'text-white'}`}>{task.title}</h3>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
           </div>
-          
-          <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-250px)] pr-2 custom-scrollbar">
-            {tasks.map(task => (
-              <Card 
-                key={task.id} 
-                className={`border-none shadow-xl rounded-3xl cursor-pointer transition-all duration-300 group ${selectedTask?.id === task.id ? 'bg-amber-500 ring-4 ring-amber-500/20' : 'bg-slate-900/80 hover:bg-slate-800'}`}
-                onClick={() => setSelectedTask(task)}
-              >
-                <CardContent className="p-6 space-y-4">
-                  <Badge className={selectedTask?.id === task.id ? 'bg-slate-900 text-white' : task.priority === 'High' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400'}>
-                    {task.priority} PRIORITY
-                  </Badge>
-                  <h3 className={`font-black text-lg leading-tight ${selectedTask?.id === task.id ? 'text-slate-900' : 'text-white'}`}>{task.title}</h3>
-                </CardContent>
-              </Card>
-            ))}
+
+          {/* Completed Assignments Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-lg font-black text-slate-400 flex items-center gap-2">
+                <History className="w-5 h-5 text-emerald-500" /> Submitted for Verification
+              </h2>
+              <Badge className="bg-slate-800 text-slate-500 border-slate-700">{completedTasks.length}</Badge>
+            </div>
+            
+            <div className="space-y-4 overflow-y-auto max-h-[40vh] pr-2 custom-scrollbar">
+              {completedTasks.length === 0 ? (
+                <div className="text-center py-10 bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-800">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No submitted tasks</p>
+                </div>
+              ) : (
+                completedTasks.map(task => (
+                  <Card 
+                    key={task.id} 
+                    className="border-none shadow-xl rounded-3xl bg-slate-900/40 opacity-70 grayscale hover:grayscale-0 transition-all duration-300"
+                  >
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          SUBMITTED
+                        </Badge>
+                        <span className="text-[10px] font-mono text-slate-600">ID: {task.id}</span>
+                      </div>
+                      <h3 className="font-black text-lg leading-tight text-slate-400">{task.title}</h3>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
           </div>
         </div>
 
