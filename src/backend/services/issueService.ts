@@ -1,224 +1,165 @@
-import { mockDb } from '../db';
+import { supabase } from '@/integrations/supabase/client';
 import { Issue, IssueCategory, IssuePriority, IssueStatus, Location, Comment, WorkerReport } from '../types';
 import { aiService } from './aiService';
 import { notificationService } from './notificationService';
 
 export const issueService = {
-  createIssue: (citizenId: string, data: { title: string; description: string; imageUrl?: string; videoUrl?: string; location: Location }) => {
+  getIssues: async () => {
+    const { data, error } = await supabase
+      .from('issues')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  createIssue: async (citizenId: string, data: { title: string; description: string; imageUrl?: string; videoUrl?: string; location: Location }) => {
     const analysis = aiService.analyzeIssue(data.description);
     
-    const newIssue: Issue = {
-      id: Math.random().toString(36).substr(2, 9),
-      citizenId,
-      title: data.title || analysis.suggestedTitle,
-      description: data.description,
-      imageUrl: data.imageUrl,
-      videoUrl: data.videoUrl,
-      category: analysis.category,
-      status: 'Pending',
-      priority: analysis.priority,
-      location: data.location,
-      statusHistory: [{
+    const { data: newIssue, error } = await supabase
+      .from('issues')
+      .insert({
+        citizen_id: citizenId,
+        title: data.title || analysis.suggestedTitle,
+        description: data.description,
+        image_url: data.imageUrl,
+        video_url: data.videoUrl,
+        category: analysis.category,
         status: 'Pending',
-        timestamp: new Date().toISOString(),
-        updatedBy: 'CityCare AI'
-      }],
-      upvotes: [],
-      reports: [],
-      comments: [],
-      escalated: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notified: false
-    };
+        priority: analysis.priority,
+        location_address: data.location.address,
+        location_lat: data.location.lat,
+        location_lng: data.location.lng,
+        status_history: [{
+          status: 'Pending',
+          timestamp: new Date().toISOString(),
+          updatedBy: 'CityCare AI'
+        }]
+      })
+      .select()
+      .single();
 
-    mockDb.issues.push(newIssue);
-    mockDb.save();
+    if (error) throw error;
     return newIssue;
   },
 
-  findSimilarIssues: (description: string, location: Location) => {
-    const keywords = description.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-    
-    return mockDb.issues.filter(issue => {
-      if (issue.status === 'Resolved' || issue.status === 'Flagged') return false;
+  toggleUpvote: async (issueId: string, userId: string) => {
+    const { data: issue, error: fetchError } = await supabase
+      .from('issues')
+      .select('upvotes, priority')
+      .eq('id', issueId)
+      .single();
 
-      const latDiff = Math.abs(issue.location.lat - location.lat);
-      const lngDiff = Math.abs(issue.location.lng - location.lng);
-      const isNear = latDiff < 0.005 && lngDiff < 0.005;
+    if (fetchError) throw fetchError;
 
-      if (!isNear) return false;
-
-      const issueText = (issue.title + " " + issue.description).toLowerCase();
-      const matchCount = keywords.filter(kw => issueText.includes(kw)).length;
-      
-      return matchCount >= 2;
-    });
-  },
-
-  toggleUpvote: (issueId: string, userId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-
-    if (!issue.upvotes) issue.upvotes = [];
-    const index = issue.upvotes.indexOf(userId);
+    let upvotes = issue.upvotes || [];
+    const index = upvotes.indexOf(userId);
     if (index === -1) {
-      issue.upvotes.push(userId);
-      if (issue.upvotes.length >= 5 && issue.priority !== 'High') {
-        issue.priority = 'High';
-      } else if (issue.upvotes.length >= 2 && issue.priority === 'Low') {
-        issue.priority = 'Medium';
-      }
+      upvotes.push(userId);
     } else {
-      issue.upvotes.splice(index, 1);
+      upvotes.splice(index, 1);
     }
-    
-    mockDb.save();
-    return issue;
+
+    let priority = issue.priority;
+    if (upvotes.length >= 5 && priority !== 'High') {
+      priority = 'High';
+    } else if (upvotes.length >= 2 && priority === 'Low') {
+      priority = 'Medium';
+    }
+
+    const { data: updatedIssue, error: updateError } = await supabase
+      .from('issues')
+      .update({ upvotes, priority, updated_at: new Date().toISOString() })
+      .eq('id', issueId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+    return updatedIssue;
   },
 
-  updateStatus: (issueId: string, status: IssueStatus, adminId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) throw new Error('Issue not found');
+  updateStatus: async (issueId: string, status: IssueStatus, adminId: string) => {
+    const { data: issue, error: fetchError } = await supabase
+      .from('issues')
+      .select('*')
+      .eq('id', issueId)
+      .single();
 
-    issue.status = status;
-    issue.updatedAt = new Date().toISOString();
-    
-    if (status === 'Resolved') {
-      issue.resolvedAt = new Date().toISOString();
-      issue.isSevereAlert = false;
-      const citizen = mockDb.users.find(u => u.id === issue.citizenId);
-      if (citizen) {
-        citizen.points = (citizen.points || 0) + 10;
-      }
-      // Send notification to citizen
-      notificationService.sendResolutionMessage(issue.citizenId, issue.id, issue.title);
-    }
-    
-    if (!issue.statusHistory) issue.statusHistory = [];
-    issue.statusHistory.push({
+    if (fetchError) throw fetchError;
+
+    const history = issue.status_history || [];
+    history.push({
       status,
       timestamp: new Date().toISOString(),
       updatedBy: adminId
     });
 
-    mockDb.save();
-    return issue;
-  },
-
-  reissueIssue: (issueId: string, citizenId: string, note: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue || issue.citizenId !== citizenId) return;
-
-    issue.status = 'Pending';
-    issue.priority = 'High';
-    issue.isReissued = true;
-    issue.updatedAt = new Date().toISOString();
-    
-    if (!issue.statusHistory) issue.statusHistory = [];
-    issue.statusHistory.push({
-      status: 'Pending',
-      timestamp: new Date().toISOString(),
-      updatedBy: 'Citizen (Re-issued)',
-      note: note || 'Citizen reported that the issue persists after resolution.'
-    });
-
-    mockDb.save();
-    return issue;
-  },
-
-  submitWorkerReport: (issueId: string, report: WorkerReport) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) throw new Error('Issue not found');
-
-    issue.status = 'Completed';
-    issue.workerReport = report;
-    issue.updatedAt = new Date().toISOString();
-    
-    if (!issue.statusHistory) issue.statusHistory = [];
-    issue.statusHistory.push({
-      status: 'Completed',
-      timestamp: new Date().toISOString(),
-      updatedBy: `Worker (ID: ${issue.workerId})`,
-      note: report.notes
-    });
-
-    mockDb.save();
-    return issue;
-  },
-
-  assignIssue: (issueId: string, department: string, workerId?: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) throw new Error('Issue not found');
-    
-    issue.assignedTo = department;
-    if (workerId) {
-      issue.workerId = workerId;
-      issue.status = 'In Progress';
-    }
-    issue.updatedAt = new Date().toISOString();
-    mockDb.save();
-    return issue;
-  },
-
-  getIssuesByRadius: (lat: number, lng: number, radiusKm: number) => {
-    const toRad = (value: number) => (value * Math.PI) / 180;
-    
-    return mockDb.issues.filter(issue => {
-      const R = 6371;
-      const dLat = toRad(issue.location.lat - lat);
-      const dLon = toRad(issue.location.lng - lng);
-      const a = 
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(lat)) * Math.cos(toRad(issue.location.lat)) * 
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const distance = R * c;
-      return distance <= radiusKm;
-    });
-  },
-
-  toggleReport: (issueId: string, userId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-    if (!issue.reports) issue.reports = [];
-    const index = issue.reports.indexOf(userId);
-    if (index === -1) issue.reports.push(userId);
-    else issue.reports.splice(index, 1);
-    mockDb.save();
-    return issue;
-  },
-
-  addComment: (issueId: string, userId: string, userName: string, text: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-    const newComment: Comment = {
-      id: Math.random().toString(36).substr(2, 9),
-      userId,
-      userName,
-      text,
-      timestamp: new Date().toISOString()
+    const updateData: any = {
+      status,
+      status_history: history,
+      updated_at: new Date().toISOString()
     };
-    if (!issue.comments) issue.comments = [];
-    issue.comments.push(newComment);
-    mockDb.save();
-    return issue;
-  },
 
-  deleteComment: (issueId: string, commentId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (!issue) return;
-    if (!issue.comments) issue.comments = [];
-    issue.comments = issue.comments.filter(c => c.id !== commentId);
-    mockDb.save();
-    return issue;
-  },
+    if (status === 'Resolved') {
+      updateData.resolved_at = new Date().toISOString();
+      updateData.is_severe_alert = false;
+      
+      // Award points to citizen
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('points')
+        .eq('id', issue.citizen_id)
+        .single();
+      
+      if (profile) {
+        await supabase
+          .from('profiles')
+          .update({ points: (profile.points || 0) + 10 })
+          .eq('id', issue.citizen_id);
+      }
 
-  markAsNotified: (issueId: string) => {
-    const issue = mockDb.issues.find(i => i.id === issueId);
-    if (issue) {
-      issue.notified = true;
-      mockDb.save();
+      await notificationService.sendResolutionMessage(issue.citizen_id, issue.id, issue.title);
     }
+
+    const { data: updatedIssue, error: updateError } = await supabase
+      .from('issues')
+      .update(updateData)
+      .eq('id', issueId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+    return updatedIssue;
+  },
+
+  addComment: async (issueId: string, userId: string, userName: string, text: string) => {
+    const { error } = await supabase
+      .from('comments')
+      .insert({
+        issue_id: issueId,
+        user_id: userId,
+        user_name: userName,
+        text: text
+      });
+
+    if (error) throw error;
+  },
+
+  assignIssue: async (issueId: string, department: string, workerId?: string) => {
+    const { data: updatedIssue, error } = await supabase
+      .from('issues')
+      .update({
+        assigned_to: department,
+        worker_id: workerId,
+        status: workerId ? 'In Progress' : 'Pending',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', issueId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return updatedIssue;
   }
 };
