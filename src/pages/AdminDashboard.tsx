@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,8 +39,12 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('current_user') || '{}');
+    const userStr = localStorage.getItem('current_user');
+    if (!userStr) return navigate('/login');
+    
+    const user = JSON.parse(userStr);
     if (user.role !== 'admin') return navigate('/login');
+    
     refreshData();
 
     // Mock Live Feed
@@ -57,10 +63,11 @@ const AdminDashboard = () => {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [navigate]);
 
   const refreshData = () => {
-    setStats(analyticsService.getDashboardStats());
+    const dashboardStats = analyticsService.getDashboardStats();
+    setStats(dashboardStats);
     setIssues([...mockDb.issues].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     setWorkers(mockDb.users.filter(u => u.role === 'worker'));
   };
@@ -102,6 +109,7 @@ const AdminDashboard = () => {
   const reportedIssues = issues.filter(issue => issue.reports && issue.reports.length > 0 && issue.status !== 'Flagged');
 
   if (!stats) return null;
+
   const pieData = Object.entries(stats.byCategory).map(([name, value]) => ({ name, value }));
 
   return (
@@ -368,7 +376,7 @@ const AdminDashboard = () => {
                             <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" dark-stroke="#1e293b" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                         <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} fontWeight="bold" />
                         <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} fontWeight="bold" />
                         <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', fontSize: '12px', color: '#fff' }} />
@@ -449,7 +457,7 @@ const AdminDashboard = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                 <Globe className="w-4 h-4 text-emerald-500" /> Global Operations Map
-              </Title>
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <div className="rounded-2xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 shadow-lg h-[300px]">
