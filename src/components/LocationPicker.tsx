@@ -4,18 +4,17 @@ import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { MapPin, Target } from 'lucide-react';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { Target } from 'lucide-react';
 
-// Custom Picker Icon
-const pickerIconMarkup = renderToStaticMarkup(
-  <div className="relative flex items-center justify-center">
-    <div className="absolute w-12 h-12 rounded-full bg-emerald-500/20 animate-pulse" />
-    <div className="relative w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white transform -rotate-45">
-      <MapPin className="text-white w-6 h-6 transform rotate-45" />
+// Custom Picker Icon using string template
+const pickerIconMarkup = `
+  <div class="relative flex items-center justify-center">
+    <div class="absolute w-12 h-12 rounded-full bg-emerald-500/20 animate-pulse"></div>
+    <div class="relative w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white transform -rotate-45">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white transform rotate-45"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
     </div>
   </div>
-);
+`;
 
 const PickerIcon = L.divIcon({
   html: pickerIconMarkup,
@@ -65,7 +64,6 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ lat, lng, onChange }) =
         <Marker position={[lat, lng]} icon={PickerIcon} />
       </MapContainer>
       
-      {/* Tactical UI Overlay */}
       <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
         <div className="bg-white/90 backdrop-blur-md p-2 rounded-xl shadow-lg border border-slate-100">
           <Target className="w-5 h-5 text-emerald-600" />

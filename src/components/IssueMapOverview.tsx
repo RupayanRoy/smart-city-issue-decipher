@@ -6,27 +6,29 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Issue } from '@/backend/types';
 import { Badge } from './ui/badge';
-import { MapPin, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { MapPin } from 'lucide-react';
 
-// Custom Marker Creator
+// Custom Marker Creator using string templates to avoid react-dom/server issues
 const createCustomIcon = (status: string, priority: string) => {
   const color = status === 'Resolved' ? '#10b981' : 
                 status === 'In Progress' ? '#3b82f6' : 
                 priority === 'High' ? '#ef4444' : '#f59e0b';
 
-  const iconMarkup = renderToStaticMarkup(
-    <div className="relative flex items-center justify-center">
-      <div className="absolute w-8 h-8 rounded-full animate-ping opacity-20" style={{ backgroundColor: color }} />
-      <div className="relative w-10 h-10 rounded-2xl flex items-center justify-center shadow-xl border-2 border-white transform -rotate-45 hover:rotate-0 transition-transform duration-300" style={{ backgroundColor: color }}>
-        <div className="transform rotate-45">
-          {status === 'Resolved' ? <CheckCircle2 className="text-white w-5 h-5" /> : 
-           status === 'In Progress' ? <Clock className="text-white w-5 h-5" /> : 
-           <AlertCircle className="text-white w-5 h-5" />}
+  // SVG icons as strings
+  const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  const clockIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  const alertIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
+
+  const iconMarkup = `
+    <div class="relative flex items-center justify-center">
+      <div class="absolute w-8 h-8 rounded-full animate-ping opacity-20" style="background-color: ${color}"></div>
+      <div class="relative w-10 h-10 rounded-2xl flex items-center justify-center shadow-xl border-2 border-white transform -rotate-45 hover:rotate-0 transition-transform duration-300" style="background-color: ${color}">
+        <div class="transform rotate-45 text-white flex items-center justify-center">
+          ${status === 'Resolved' ? checkIcon : status === 'In Progress' ? clockIcon : alertIcon}
         </div>
       </div>
     </div>
-  );
+  `;
 
   return L.divIcon({
     html: iconMarkup,
@@ -64,7 +66,6 @@ const IssueMapOverview: React.FC<IssueMapOverviewProps> = ({ issues, center: ext
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
       >
-        {/* Modern Voyager Tiles */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
@@ -97,7 +98,6 @@ const IssueMapOverview: React.FC<IssueMapOverviewProps> = ({ issues, center: ext
         ))}
       </MapContainer>
       
-      {/* Tactical Overlay UI */}
       <div className="absolute bottom-4 left-4 z-[400] bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-xl pointer-events-none">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
