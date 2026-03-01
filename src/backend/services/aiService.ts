@@ -1,49 +1,55 @@
 import { IssueCategory, IssuePriority } from '../types';
 
-const CATEGORY_KEYWORDS: Record<IssueCategory, string[]> = {
+const CATEGORY_PATTERNS: Record<IssueCategory, RegExp[]> = {
   Water: [
-    'flood', 'burst', 'leak', 'pipe', 'water', 'drainage', 'sewage', 'tap', 
-    'overflow', 'stagnant', 'clogged', 'drain', 'gutter', 'hydrant', 'sprinkler',
-    'pumping', 'well', 'tanker', 'contamination', 'smelly water', 'no supply',
-    'low pressure', 'dirty water', 'main break', 'culvert'
+    /flood/i, /leak/i, /pipe/i, /water/i, /drain/i, /sewage/i, /tap/i, /overflow/i, 
+    /stagnant/i, /clogged/i, /gutter/i, /hydrant/i, /sprinkler/i, /pumping/i, 
+    /well/i, /tanker/i, /contamination/i, /smelly.*water/i, /no.*supply/i,
+    /low.*pressure/i, /dirty.*water/i, /main.*break/i, /culvert/i, /aquifer/i
   ],
   Electricity: [
-    'power', 'outage', 'shock', 'wire', 'electric', 'blackout', 'transformer', 
-    'light', 'bulb', 'sparking', 'short circuit', 'meter', 'pole', 'cable', 
-    'darkness', 'streetlamp', 'voltage', 'fluctuation', 'hanging wire',
-    'exposed wires', 'fuse', 'substation', 'grid'
+    /power/i, /outage/i, /shock/i, /wire/i, /electric/i, /blackout/i, /transformer/i, 
+    /light/i, /bulb/i, /sparking/i, /short.*circuit/i, /meter/i, /pole/i, /cable/i, 
+    /darkness/i, /streetlamp/i, /voltage/i, /fluctuation/i, /hanging.*wire/i,
+    /exposed.*wires/i, /fuse/i, /substation/i, /grid/i, /current/i
   ],
   Road: [
-    'pothole', 'crack', 'street', 'road', 'asphalt', 'pavement', 'traffic', 
-    'divider', 'bump', 'manhole', 'sidewalk', 'curb', 'signage', 'signal', 
-    'marking', 'gravel', 'excavation', 'digging', 'blockage', 'zebra crossing',
-    'speed breaker', 'paving', 'tar', 'sinkhole'
+    /pothole/i, /crack/i, /street/i, /road/i, /asphalt/i, /pavement/i, /traffic/i, 
+    /divider/i, /bump/i, /manhole/i, /sidewalk/i, /curb/i, /signage/i, /signal/i, 
+    /marking/i, /gravel/i, /excavation/i, /digging/i, /blockage/i, /zebra.*crossing/i,
+    /speed.*breaker/i, /paving/i, /tar/i, /sinkhole/i, /pathway/i, /lane/i
   ],
   Garbage: [
-    'trash', 'waste', 'smell', 'dump', 'litter', 'collection', 'bin', 'garbage',
-    'debris', 'junk', 'stench', 'overflowing', 'recycling', 'scavenger', 
-    'fly-tipping', 'dead animal', 'carcass', 'plastic', 'dumpster', 'refuse',
-    'sanitation', 'unhygienic'
+    /trash/i, /waste/i, /smell/i, /dump/i, /litter/i, /collection/i, /bin/i, /garbage/i,
+    /debris/i, /junk/i, /stench/i, /overflowing/i, /recycling/i, /scavenger/i, 
+    /fly-tipping/i, /dead.*animal/i, /carcass/i, /plastic/i, /dumpster/i, /refuse/i,
+    /sanitation/i, /unhygienic/i, /filth/i, /muck/i
   ],
   Other: []
 };
 
-const PRIORITY_KEYWORDS = {
+const PRIORITY_PATTERNS = {
   High: [
-    'danger', 'emergency', 'risk', 'accident', 'immediate', 'dying', 'fire', 
-    'hazard', 'critical', 'live wire', 'flooding', 'injury', 'blocked', 
-    'collapsed', 'toxic', 'explosion', 'urgent', 'asap', 'life threatening',
-    'severe', 'catastrophic', 'bleeding', 'trapped'
+    /danger/i, /emergency/i, /risk/i, /accident/i, /immediate/i, /dying/i, /fire/i, 
+    /hazard/i, /critical/i, /live.*wire/i, /flooding/i, /injury/i, /blocked/i, 
+    /collapsed/i, /toxic/i, /explosion/i, /urgent/i, /asap/i, /life.*threatening/i,
+    /severe/i, /catastrophic/i, /bleeding/i, /trapped/i, /panic/i, /help.*now/i
   ],
   Medium: [
-    'broken', 'urgent', 'bad', 'annoying', 'blocking', 'dark', 'smelly',
-    'inconvenient', 'messy', 'leaking', 'damaged', 'faulty', 'not working',
-    'needs repair', 'deteriorating'
+    /broken/i, /urgent/i, /bad/i, /annoying/i, /blocking/i, /dark/i, /smelly/i,
+    /inconvenient/i, /messy/i, /leaking/i, /damaged/i, /faulty/i, /not.*working/i,
+    /needs.*repair/i, /deteriorating/i, /trouble/i, /issue/i
   ],
   Low: [
-    'minor', 'small', 'request', 'suggestion', 'paint', 'dirty', 'old',
-    'maintenance', 'checkup', 'cosmetic', 'faded'
+    /minor/i, /small/i, /request/i, /suggestion/i, /paint/i, /dirty/i, /old/i,
+    /maintenance/i, /checkup/i, /cosmetic/i, /faded/i, /notice/i, /info/i
   ]
+};
+
+const INTENT_PATTERNS = {
+  Greeting: [/hi/i, /hello/i, /hey/i, /good.*morning/i, /good.*afternoon/i, /greetings/i],
+  Thanks: [/thanks/i, /thank.*you/i, /awesome/i, /great/i, /cool/i, /ok/i, /fine/i],
+  Help: [/help/i, /what.*can.*you.*do/i, /how.*does.*this.*work/i, /instructions/i]
 };
 
 export interface ChatMessage {
@@ -53,12 +59,10 @@ export interface ChatMessage {
 
 export const aiService = {
   analyzeIssue: (description: string) => {
-    const text = description.toLowerCase();
-    
     let category: IssueCategory = 'Other';
     let maxMatches = 0;
-    for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-      const matches = keywords.filter(kw => text.includes(kw)).length;
+    for (const [cat, patterns] of Object.entries(CATEGORY_PATTERNS)) {
+      const matches = patterns.filter(p => p.test(description)).length;
       if (matches > maxMatches) {
         maxMatches = matches;
         category = cat as IssueCategory;
@@ -66,9 +70,9 @@ export const aiService = {
     }
 
     let priority: IssuePriority = 'Low';
-    if (PRIORITY_KEYWORDS.High.some(kw => text.includes(kw))) {
+    if (PRIORITY_PATTERNS.High.some(p => p.test(description))) {
       priority = 'High';
-    } else if (PRIORITY_KEYWORDS.Medium.some(kw => text.includes(kw))) {
+    } else if (PRIORITY_PATTERNS.Medium.some(p => p.test(description))) {
       priority = 'Medium';
     }
 
@@ -81,14 +85,19 @@ export const aiService = {
 
   analyzeConversation: (messages: ChatMessage[]) => {
     const userMessages = messages.filter(m => m.role === 'user').map(m => m.text);
-    const fullText = userMessages.join(' ').toLowerCase();
-    const lastUserMessage = userMessages[userMessages.length - 1]?.toLowerCase() || '';
+    const fullText = userMessages.join(' ');
+    const lastUserMessage = userMessages[userMessages.length - 1] || '';
     
+    // Detect Intent
+    const isGreeting = INTENT_PATTERNS.Greeting.some(p => p.test(lastUserMessage));
+    const isThanks = INTENT_PATTERNS.Thanks.some(p => p.test(lastUserMessage));
+    const isHelp = INTENT_PATTERNS.Help.some(p => p.test(lastUserMessage));
+
     // Detect Category from full history
     let category: IssueCategory = 'Other';
     let maxMatches = 0;
-    for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-      const matches = keywords.filter(kw => fullText.includes(kw)).length;
+    for (const [cat, patterns] of Object.entries(CATEGORY_PATTERNS)) {
+      const matches = patterns.filter(p => p.test(fullText)).length;
       if (matches > maxMatches) {
         maxMatches = matches;
         category = cat as IssueCategory;
@@ -97,34 +106,35 @@ export const aiService = {
 
     // Detect Priority from full history
     let priority: IssuePriority = 'Low';
-    if (PRIORITY_KEYWORDS.High.some(kw => fullText.includes(kw))) {
+    if (PRIORITY_PATTERNS.High.some(p => p.test(fullText))) {
       priority = 'High';
-    } else if (PRIORITY_KEYWORDS.Medium.some(kw => fullText.includes(kw))) {
+    } else if (PRIORITY_PATTERNS.Medium.some(p => p.test(fullText))) {
       priority = 'Medium';
     }
 
-    // Improved Location Detection (checking full history)
+    // Advanced Location Detection
     const locationPatterns = [
-      /(at|near|on|in|beside|opposite|behind|front of|next to)\s+([A-Z0-9][a-z0-9]+\s?)+/g,
-      /\d+\s+[A-Z][a-z]+\s+(Street|Road|Ave|Avenue|Lane|Way|Blvd|Drive)/gi,
+      /(at|near|on|in|beside|opposite|behind|front of|next to)\s+([A-Z0-9][a-z0-9]+\s?)+/gi,
+      /\d+\s+[A-Z][a-z]+\s+(Street|Road|Ave|Avenue|Lane|Way|Blvd|Drive|Rd|St)/gi,
       /sector\s+\d+/gi,
       /block\s+[a-z0-9]/gi,
-      /landmark|near the|opposite to|behind the/gi
+      /landmark|near the|opposite to|behind the|close to/gi
     ];
     
     const hasLocationPattern = locationPatterns.some(pattern => pattern.test(fullText));
-    const hasLocationKeywords = fullText.includes('street') || fullText.includes('road') || 
-                               fullText.includes('avenue') || fullText.includes('area') ||
-                               fullText.includes('landmark') || fullText.includes('near');
+    const hasLocationKeywords = /street|road|avenue|area|landmark|near|address|location|venue/i.test(fullText);
 
     const lastBotMessage = messages.filter(m => m.role === 'bot').pop()?.text.toLowerCase() || '';
-    const isAnsweringLocation = lastBotMessage.includes('location') || lastBotMessage.includes('venue') || lastBotMessage.includes('where');
+    const isAnsweringLocation = /location|venue|where/i.test(lastBotMessage);
 
     return {
       category,
       priority,
       hasLocation: hasLocationPattern || hasLocationKeywords || (isAnsweringLocation && lastUserMessage.length > 5),
       isAnsweringLocation,
+      isGreeting,
+      isThanks,
+      isHelp,
       suggestedTitle: userMessages[0]?.split('.').slice(0, 1)[0].substring(0, 50) + (userMessages[0]?.length > 50 ? '...' : '')
     };
   },
@@ -132,22 +142,46 @@ export const aiService = {
   generateResponse: (analysis: any, messages: ChatMessage[]) => {
     const userMessages = messages.filter(m => m.role === 'user');
     
+    if (analysis.isGreeting && userMessages.length === 1) {
+      return "Hello! I'm your CityCare assistant. I can help you report issues like potholes, power outages, or garbage pile-ups. What's on your mind today?";
+    }
+
+    if (analysis.isHelp) {
+      return "I'm here to make reporting city issues easy. Just describe what's wrong and where it is. You can even upload photos or videos. Once I have the details, I'll file an official report for you!";
+    }
+
+    if (analysis.isThanks && analysis.hasLocation && analysis.category !== 'Other') {
+      return "You're very welcome! I'm glad I could help. Ready to submit this report now?";
+    }
+
     // If we have everything, confirm
     if (analysis.hasLocation && analysis.category !== 'Other') {
-      return `I've got all the details. This looks like a ${analysis.priority} priority ${analysis.category.toLowerCase()} issue. I've also noted the location from our conversation. Ready to submit this report?`;
+      const priorityMsg = analysis.priority === 'High' ? "This sounds like an urgent matter, and I've marked it as High Priority." : "I've noted the details.";
+      return `${priorityMsg} I've categorized this as a ${analysis.category.toLowerCase()} issue at the location you mentioned. Shall we go ahead and file the report?`;
     }
 
     // If we have category but no location
     if (analysis.category !== 'Other' && !analysis.hasLocation) {
-      return `I've identified this as a ${analysis.category.toLowerCase()} problem. To help our teams find it, could you tell me exactly where this is? (e.g., "Near the main gate" or a street name)`;
+      const catResponses: Record<IssueCategory, string> = {
+        Water: "I've noted the water-related issue. To send a repair crew, I need to know the exact location or a nearby landmark.",
+        Electricity: "Power issues can be dangerous. Please tell me where this is happening so we can alert the electrical grid team.",
+        Road: "Road safety is important. Could you provide the street name or a landmark so we can locate this issue?",
+        Garbage: "I've logged the sanitation report. Where exactly is the waste located?",
+        Other: "I've noted your concern. Could you tell me where this is located?"
+      };
+      return catResponses[analysis.category as IssueCategory] || "I've got the description, but I'm missing the location. Where is this happening?";
     }
 
     // If we have location but no category
     if (analysis.hasLocation && analysis.category === 'Other') {
-      return `I've noted the location. Could you describe the issue in more detail? Is it related to roads, water, electricity, or garbage?`;
+      return "I've pinned the location! Now, could you tell me a bit more about the problem? Is it something with the roads, water, lights, or maybe garbage?";
     }
 
-    // Default fallback
-    return "I'm listening. Please tell me more about the issue and where it's located so I can help you file a report.";
+    // Default fallback for vague descriptions
+    if (userMessages.length > 0 && analysis.category === 'Other' && !analysis.hasLocation) {
+      return "I'm here to help, but I need a bit more detail. Could you describe the issue and tell me where it's located?";
+    }
+
+    return "I'm listening. Please describe the issue and its location so I can assist you.";
   }
 };
