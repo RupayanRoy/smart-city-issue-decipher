@@ -37,7 +37,8 @@ if (!mockDb.users.find(u => u.role === 'admin')) {
 if (!mockDb.users.find(u => u.role === 'worker')) {
   mockDb.users.push(
     { id: 'wrk-1', name: 'John Technician', email: 'john@citycare.gov', role: 'worker', password: 'password123', department: 'Public Works' },
-    { id: 'wrk-2', name: 'Sarah Electrician', email: 'sarah@citycare.gov', role: 'worker', password: 'password123', department: 'Electrical Grid' }
+    { id: 'wrk-2', name: 'Sarah Electrician', email: 'sarah@citycare.gov', role: 'worker', password: 'password123', department: 'Electrical Grid' },
+    { id: 'wrk-3', name: 'Mike Firefighter', email: 'mike@citycare.gov', role: 'worker', password: 'password123', department: 'Fire & Rescue' }
   );
 }
 
@@ -91,6 +92,23 @@ if (mockDb.issues.length === 0) {
       escalated: false,
       createdAt: new Date(now.getTime() - 86400000).toISOString(),
       updatedAt: new Date(now.getTime() - 86400000).toISOString()
+    },
+    {
+      id: 'iss-3',
+      citizenId: 'cit-3',
+      title: 'Small Fire in Trash Bin',
+      description: 'There is smoke and small flames coming from a public trash bin near the park.',
+      category: 'Fire',
+      status: 'Pending',
+      priority: 'High',
+      location: { address: 'Anna Nagar, Chennai', lat: 13.0850, lng: 80.2101 },
+      statusHistory: [{ status: 'Pending', timestamp: new Date().toISOString(), updatedBy: 'System' }],
+      upvotes: [],
+      comments: [],
+      escalated: false,
+      isSevereAlert: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
   ];
   mockDb.issues.push(...mockIssues);

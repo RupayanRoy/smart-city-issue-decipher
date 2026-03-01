@@ -22,7 +22,7 @@ export interface User {
   notifications?: Notification[];
 }
 
-export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Other';
+export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Fire' | 'Medical' | 'Public Safety' | 'Other';
 export type IssueStatus = 'Pending' | 'In Progress' | 'Completed' | 'Resolved' | 'Flagged';
 export type IssuePriority = 'Low' | 'Medium' | 'High';
 
@@ -31,6 +31,9 @@ export const DEPARTMENTS = [
   'Water & Sanitation',
   'Electrical Grid',
   'Waste Management',
+  'Fire & Rescue',
+  'Emergency Medical Services',
+  'Public Safety',
   'Urban Planning'
 ];
 

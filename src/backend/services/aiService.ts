@@ -25,6 +25,18 @@ const CATEGORY_PATTERNS: Record<IssueCategory, RegExp[]> = {
     /fly-tipping/i, /dead.*animal/i, /carcass/i, /plastic/i, /dumpster/i, /refuse/i,
     /sanitation/i, /unhygienic/i, /filth/i, /muck/i
   ],
+  Fire: [
+    /fire/i, /smoke/i, /burning/i, /blaze/i, /flame/i, /explosion/i, /gas.*leak/i,
+    /hydrant/i, /extinguisher/i, /arson/i, /forest.*fire/i, /building.*fire/i
+  ],
+  Medical: [
+    /ambulance/i, /injury/i, /heart/i, /breathing/i, /unconscious/i, /medical/i,
+    /accident/i, /bleeding/i, /sick/i, /emergency/i, /hospital/i, /first.*aid/i
+  ],
+  'Public Safety': [
+    /crime/i, /theft/i, /suspicious/i, /police/i, /assault/i, /safety/i, /robbery/i,
+    /vandalism/i, /harassment/i, /weapon/i, /fight/i, /security/i
+  ],
   Other: []
 };
 
@@ -173,6 +185,9 @@ export const aiService = {
         Electricity: "Power issues can be dangerous. Please tell me where this is happening so we can alert the electrical grid team.",
         Road: "Road safety is important. Could you provide the street name or a landmark so we can locate this issue?",
         Garbage: "I've logged the sanitation report. Where exactly is the waste located?",
+        Fire: "Fire emergencies are critical. Please tell me the location immediately so we can dispatch Fire & Rescue.",
+        Medical: "Medical emergencies require fast action. Where should we send the ambulance?",
+        'Public Safety': "Safety is our priority. Where is this incident occurring so we can alert the authorities?",
         Other: "I've noted your concern. Could you tell me where this is located?"
       };
       return catResponses[analysis.category as IssueCategory] || "I've got the description, but I'm missing the location. Where is this happening?";
