@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { mockDb } from '@/backend/db';
 import { showSuccess, showError } from '@/utils/toast';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -37,34 +38,38 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50 via-white to-sky-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50 via-white to-sky-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-300">
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
+      
       <div className="flex-1 flex flex-col items-center justify-center p-4 space-y-8">
         <div className="text-center space-y-2 max-w-md">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-200 mb-4">
             <Heart className="w-8 h-8 fill-current" />
           </div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900">CityCare</h1>
-          <p className="text-slate-500 font-medium">Empowering citizens to build a better, safer, and cleaner society together.</p>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">CityCare</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Empowering citizens to build a better, safer, and cleaner society together.</p>
         </div>
 
-        <Card className="w-full max-w-md shadow-2xl shadow-emerald-100/50 border-none rounded-[2.5rem] overflow-hidden bg-white">
-          <CardHeader className="bg-slate-900 text-white text-center py-10">
+        <Card className="w-full max-w-md shadow-2xl shadow-emerald-100/50 dark:shadow-none border-none rounded-[2.5rem] overflow-hidden bg-white dark:bg-slate-900">
+          <CardHeader className="bg-slate-900 dark:bg-slate-950 text-white text-center py-10">
             <CardTitle className="text-2xl font-black tracking-tight">Welcome Back</CardTitle>
             <CardDescription className="text-slate-400 font-medium">
               Sign in to access the command center
-            </CardDescription>
+              </CardDescription>
           </CardHeader>
           <CardContent className="p-8 space-y-8">
             <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700 font-bold ml-1">Email Address</Label>
+                <Label htmlFor="email" className="text-slate-700 dark:text-slate-300 font-bold ml-1">Email Address</Label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <Input 
                     id="email"
                     type="email"
                     placeholder="name@example.com" 
-                    className="pl-12 rounded-2xl h-14 border-slate-200 focus:ring-emerald-500 font-medium"
+                    className="pl-12 rounded-2xl h-14 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-emerald-500 font-medium"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -73,14 +78,14 @@ const Login = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-700 font-bold ml-1">Password</Label>
+                <Label htmlFor="password" className="text-slate-700 dark:text-slate-300 font-bold ml-1">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <Input 
                     id="password"
                     type="password"
                     placeholder="••••••••" 
-                    className="pl-12 rounded-2xl h-14 border-slate-200 focus:ring-emerald-500 font-medium"
+                    className="pl-12 rounded-2xl h-14 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-emerald-500 font-medium"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -88,13 +93,13 @@ const Login = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 font-black text-lg shadow-xl shadow-emerald-100 transition-all active:scale-[0.98]">
+              <Button type="submit" className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg shadow-xl shadow-emerald-100 dark:shadow-none transition-all active:scale-[0.98]">
                 Sign In
               </Button>
             </form>
 
-            <div className="space-y-4 pt-4 border-t border-slate-50">
-              <div className="flex items-center gap-2 text-slate-900 font-black text-[10px] uppercase tracking-[0.2em] mb-2">
+            <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-[0.2em] mb-2">
                 <Info className="w-4 h-4 text-emerald-600" /> Quick Access Demo Accounts
               </div>
               
@@ -102,14 +107,14 @@ const Login = () => {
                 {/* Admin Demo */}
                 <button 
                   onClick={() => fillCredentials('admin@smartcity.gov', 'password123')}
-                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-left"
+                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-left"
                 >
                   <div className="flex items-center gap-3">
                     <div className="bg-slate-900 p-2 rounded-xl text-white">
                       <Shield className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-black text-slate-900">System Administrator</p>
+                      <p className="text-xs font-black text-slate-900 dark:text-white">System Administrator</p>
                       <p className="text-[10px] font-bold text-slate-500">admin@smartcity.gov</p>
                     </div>
                   </div>
@@ -119,14 +124,14 @@ const Login = () => {
                 {/* Worker Demo */}
                 <button 
                   onClick={() => fillCredentials('john@citycare.gov', 'password123')}
-                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-amber-500 hover:bg-amber-50/30 transition-all group text-left"
+                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 hover:border-amber-500 hover:bg-amber-50/30 transition-all group text-left"
                 >
                   <div className="flex items-center gap-3">
                     <div className="bg-amber-500 p-2 rounded-xl text-slate-900">
                       <HardHat className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-black text-slate-900">Field Worker</p>
+                      <p className="text-xs font-black text-slate-900 dark:text-white">Field Worker</p>
                       <p className="text-[10px] font-bold text-slate-500">john@citycare.gov</p>
                     </div>
                   </div>
@@ -136,14 +141,14 @@ const Login = () => {
                 {/* Citizen Demo */}
                 <button 
                   onClick={() => fillCredentials('rupayan@example.com', 'password123')}
-                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-left"
+                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-left"
                 >
                   <div className="flex items-center gap-3">
                     <div className="bg-emerald-600 p-2 rounded-xl text-white">
                       <UserCircle className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-black text-slate-900">Citizen Hero</p>
+                      <p className="text-xs font-black text-slate-900 dark:text-white">Citizen Hero</p>
                       <p className="text-[10px] font-bold text-slate-500">rupayan@example.com</p>
                     </div>
                   </div>
