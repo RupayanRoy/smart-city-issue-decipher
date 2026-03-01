@@ -216,6 +216,13 @@ const CitizenPortal = () => {
     }
   };
 
+  const handleAICancel = () => {
+    setShowAIAgent(false);
+    setAiMessages([]);
+    setAiData({ description: '', address: '', lat: 12.8406, lng: 80.1534, imageUrl: '', videoUrl: '' });
+    showSuccess('Report cancelled.');
+  };
+
   const finalizeAISubmission = (data: any) => {
     issueService.createIssue(user.id, {
       title: '', description: data.description, imageUrl: data.imageUrl, videoUrl: data.videoUrl,
@@ -279,7 +286,7 @@ const CitizenPortal = () => {
         {showAIAgent && (
           <AIAgentTerminal 
             messages={aiMessages} step={aiStep} input={aiInput} data={aiData} isGeocoding={isGeocoding} chatEndRef={chatEndRef}
-            onClose={() => setShowAIAgent(false)} onInputChange={setAiInput} onSubmit={handleAISubmit} onConfirm={handleAIConfirm}
+            onClose={() => setShowAIAgent(false)} onInputChange={setAiInput} onSubmit={handleAISubmit} onConfirm={handleAIConfirm} onCancel={handleAICancel}
             onFileUpload={(e, type) => {
               const file = e.target.files?.[0];
               if (file) {

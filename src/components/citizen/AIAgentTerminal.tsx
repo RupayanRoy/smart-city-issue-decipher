@@ -18,10 +18,11 @@ interface AIAgentTerminalProps {
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => void;
   onSubmit: () => void;
   onConfirm: () => void;
+  onCancel: () => void;
 }
 
 const AIAgentTerminal: React.FC<AIAgentTerminalProps> = ({
-  messages, step, input, data, isGeocoding, chatEndRef, onClose, onInputChange, onFileUpload, onSubmit, onConfirm
+  messages, step, input, data, isGeocoding, chatEndRef, onClose, onInputChange, onFileUpload, onSubmit, onConfirm, onCancel
 }) => {
   return (
     <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-[2rem] overflow-hidden flex flex-col h-[600px] bg-white animate-in fade-in slide-in-from-bottom-8 duration-500">
@@ -59,7 +60,10 @@ const AIAgentTerminal: React.FC<AIAgentTerminalProps> = ({
                   {data.videoUrl && <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center border"><Video className="w-6 h-6 text-slate-400" /></div>}
                 </div>
               </div>
-              <Button onClick={onConfirm} className="w-full bg-emerald-600 hover:bg-emerald-700 font-black rounded-xl">Confirm & File Report</Button>
+              <div className="flex flex-col gap-2">
+                <Button onClick={onConfirm} className="w-full bg-emerald-600 hover:bg-emerald-700 font-black rounded-xl">Confirm & File Report</Button>
+                <Button onClick={onCancel} variant="outline" className="w-full border-slate-200 text-slate-500 hover:bg-slate-50 font-bold rounded-xl">Cancel Report</Button>
+              </div>
             </div>
           </div>
         )}
