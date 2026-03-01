@@ -12,6 +12,7 @@ import { analyticsService } from '@/backend/services/analyticsService';
 import { issueService } from '@/backend/services/issueService';
 import { escalationService } from '@/backend/services/escalationService';
 import { showSuccess } from '@/utils/toast';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, AreaChart, Area, Legend 
@@ -142,6 +143,7 @@ const AdminDashboard = () => {
             <div className="h-10 w-px bg-slate-800" />
 
             <div className="flex items-center gap-4">
+              <ThemeToggle />
               <Button onClick={runEscalation} variant="outline" size="sm" className="rounded-xl border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white font-black text-xs">
                 <RefreshCw className="mr-2 w-4 h-4" /> ESCALATION PROTOCOL
               </Button>
