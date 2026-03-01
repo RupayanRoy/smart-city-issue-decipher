@@ -112,30 +112,36 @@ export const aiService = {
       priority = 'Medium';
     }
 
-    // Advanced Location Detection
+    // Advanced Location Detection - stricter patterns
     const locationPatterns = [
-      /(at|near|on|in|beside|opposite|behind|front of|next to)\s+([A-Z0-9][a-z0-9]+\s?)+/gi,
+      /(at|near|on|in|beside|opposite|behind|front of|next to)\s+([A-Z0-9][a-z0-9]+\s?){2,}/gi, // Needs at least 2 words after preposition
       /\d+\s+[A-Z][a-z]+\s+(Street|Road|Ave|Avenue|Lane|Way|Blvd|Drive|Rd|St)/gi,
       /sector\s+\d+/gi,
-      /block\s+[a-z0-9]/gi,
-      /landmark|near the|opposite to|behind the|close to/gi
+      /block\s+[a-z0-9]/gi
     ];
     
-    const hasLocationPattern = locationPatterns.some(pattern => pattern.test(fullText));
-    const hasLocationKeywords = /street|road|avenue|area|landmark|near|address|location|venue/i.test(fullText);
-
+    const hasLocationPattern = locationPatterns.some(pattern => pattern.test(lastUserMessage));
+    
     const lastBotMessage = messages.filter(m => m.role === 'bot').pop()?.text.toLowerCase() || '';
     const isAnsweringLocation = /location|venue|where/i.test(lastBotMessage);
+
+    // Only mark as having location if it matches a pattern OR if the user is specifically answering a location question with enough detail
+    const hasLocation = hasLocationPattern || (isAnsweringLocation && lastUserMessage.length > 8 && !isGreeting);
+
+    // Find the first non-greeting message to use as description
+    const meaningfulMessages = userMessages.filter(msg => !INTENT_PATTERNS.Greeting.some(p => p.test(msg)));
+    const suggestedDescription = meaningfulMessages.join(' ');
 
     return {
       category,
       priority,
-      hasLocation: hasLocationPattern || hasLocationKeywords || (isAnsweringLocation && lastUserMessage.length > 5),
+      hasLocation,
       isAnsweringLocation,
       isGreeting,
       isThanks,
       isHelp,
-      suggestedTitle: userMessages[0]?.split('.').slice(0, 1)[0].substring(0, 50) + (userMessages[0]?.length > 50 ? '...' : '')
+      suggestedDescription,
+      suggestedTitle: meaningfulMessages[0]?.split('.').slice(0, 1)[0].substring(0, 50) + (meaningfulMessages[0]?.length > 50 ? '...' : '')
     };
   },
 
@@ -179,6 +185,7 @@ export const aiService = {
 
     // Default fallback for vague descriptions
     if (userMessages.length > 0 && analysis.category === 'Other' && !analysis.hasLocation) {
+      if (analysis.isGreeting) return "Hi there! How can I help you today? Please describe any city issues you've noticed.";
       return "I'm here to help, but I need a bit more detail. Could you describe the issue and tell me where it's located?";
     }
 

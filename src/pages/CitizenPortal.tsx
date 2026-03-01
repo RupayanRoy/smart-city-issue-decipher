@@ -173,36 +173,51 @@ const CitizenPortal = () => {
     setAiMessages(newMessages);
     setAiInput('');
 
-    if (aiStep === 'initial' || aiStep === 'location') {
-      const analysis = aiService.analyzeConversation(newMessages);
-      if (aiStep === 'initial') setAiData(prev => ({ ...prev, description: userMsg }));
+    const analysis = aiService.analyzeConversation(newMessages);
+    
+    // Update description only if it's not a greeting
+    if (analysis.suggestedDescription) {
+      setAiData(prev => ({ ...prev, description: analysis.suggestedDescription }));
+    }
 
-      if (aiStep === 'location' || (!analysis.hasLocation && aiStep === 'initial')) {
-        setIsGeocoding(true);
-        try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(userMsg)}`);
-          const data = await response.json();
-          if (data && data.length > 0) {
-            const { lat, lon, display_name } = data[0];
-            const newLat = parseFloat(lat);
-            const newLng = parseFloat(lon);
-            setAiData(prev => ({ ...prev, address: display_name, lat: newLat, lng: newLng }));
-            setMapCenter([newLat, newLng]);
+    // Only attempt geocoding if the AI thinks there's a location OR if we're specifically in the location step
+    if (analysis.hasLocation || aiStep === 'location') {
+      setIsGeocoding(true);
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(userMsg)}`);
+        const data = await response.json();
+        if (data && data.length > 0) {
+          const { lat, lon, display_name } = data[0];
+          const newLat = parseFloat(lat);
+          const newLng = parseFloat(lon);
+          setAiData(prev => ({ ...prev, address: display_name, lat: newLat, lng: newLng }));
+          setMapCenter([newLat, newLng]);
+          
+          // If we found a location and already have a description, move to confirm
+          if (analysis.suggestedDescription) {
             setAiMessages(prev => [...prev, { role: 'bot', text: `I've found the location: ${display_name}. Ready to submit?` }]);
             setAiStep('confirm');
             setIsGeocoding(false);
             return;
           }
-        } catch (e) {}
-        setIsGeocoding(false);
-      }
-
-      setTimeout(() => {
-        const botResponse = aiService.generateResponse(analysis, newMessages);
-        setAiMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
-        setAiStep(analysis.hasLocation ? 'confirm' : 'location');
-      }, 1000);
+        }
+      } catch (e) {}
+      setIsGeocoding(false);
     }
+
+    setTimeout(() => {
+      const botResponse = aiService.generateResponse(analysis, newMessages);
+      setAiMessages(prev => [...prev, { role: 'bot', text: botResponse }]);
+      
+      // Determine next step based on analysis
+      if (analysis.hasLocation && analysis.category !== 'Other') {
+        setAiStep('confirm');
+      } else if (analysis.category !== 'Other' && !analysis.hasLocation) {
+        setAiStep('location');
+      } else {
+        setAiStep('initial');
+      }
+    }, 1000);
   };
 
   const handleAIConfirm = () => {
