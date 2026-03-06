@@ -304,11 +304,24 @@ const AdminDashboard = () => {
                           </div>
 
                           {issue.workerReport && (
-                            <div className="bg-emerald-500/5 p-6 rounded-3xl border border-emerald-500/10 space-y-3">
+                            <div className="bg-emerald-500/5 p-6 rounded-3xl border border-emerald-500/10 space-y-4">
                               <h4 className="font-black text-emerald-600 dark:text-emerald-500 flex items-center gap-2 text-xs uppercase tracking-widest">
                                 <ClipboardCheck className="w-4 h-4" /> Field Report Received
                               </h4>
                               <p className="text-slate-700 dark:text-slate-300 text-sm font-medium italic">"{issue.workerReport.notes}"</p>
+                              
+                              {issue.workerReport.usedSupplies && issue.workerReport.usedSupplies.length > 0 && (
+                                <div className="pt-2 space-y-2">
+                                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Supplies Consumed:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {issue.workerReport.usedSupplies.map((s: any, idx: number) => (
+                                      <Badge key={idx} variant="outline" className="bg-white dark:bg-slate-900 text-[10px] font-bold border-emerald-500/20">
+                                        {s.quantity}x {mockDb.supplies.find(sup => sup.id === s.supplyId)?.name || 'Item'}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
