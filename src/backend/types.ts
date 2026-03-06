@@ -11,6 +11,13 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface UserSupply {
+  supplyId: string;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -20,6 +27,7 @@ export interface User {
   points?: number;
   department?: string;
   notifications?: Notification[];
+  inventory?: UserSupply[];
 }
 
 export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Fire' | 'Medical' | 'Public Safety' | 'Other';
@@ -85,6 +93,7 @@ export interface WorkerReport {
   submittedAt: string;
   notes: string;
   imageUrl?: string;
+  usedSupplies?: { supplyId: string; quantity: number }[];
 }
 
 export interface Issue {

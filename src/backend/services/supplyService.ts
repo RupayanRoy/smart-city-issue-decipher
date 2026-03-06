@@ -6,22 +6,15 @@ export const supplyService = {
     return [...mockDb.supplies];
   },
 
-  getSuppliesByCategory: (category: IssueCategory) => {
-    return mockDb.supplies.filter(s => s.category === category);
-  },
-
   getRequests: () => {
     return [...mockDb.supplyRequests].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
-  createRequest: (data: { 
+  createRefillRequest: (data: { 
     workerId: string; 
     workerName: string; 
     supplyId: string; 
     quantity: number; 
-    type: 'Usage' | 'Refill';
-    issueId?: string;
-    issueTitle?: string;
   }) => {
     const supply = mockDb.supplies.find(s => s.id === data.supplyId);
     if (!supply) return null;
@@ -30,13 +23,11 @@ export const supplyService = {
       id: `req-${Math.random().toString(36).substr(2, 9)}`,
       workerId: data.workerId,
       workerName: data.workerName,
-      issueId: data.issueId,
-      issueTitle: data.issueTitle,
       supplyId: data.supplyId,
       supplyName: supply.name,
       quantity: data.quantity,
       status: 'Pending',
-      type: data.type,
+      type: 'Refill',
       createdAt: new Date().toISOString()
     };
 
@@ -49,14 +40,30 @@ export const supplyService = {
     const request = mockDb.supplyRequests.find(r => r.id === requestId);
     if (!request || request.status !== 'Pending') return;
 
-    const supply = mockDb.supplies.find(s => s.id === request.supplyId);
-    if (!supply) return;
+    const warehouseSupply = mockDb.supplies.find(s => s.id === request.supplyId);
+    const worker = mockDb.users.find(u => u.id === request.workerId);
+    
+    if (!warehouseSupply || !worker) return;
 
-    if (request.type === 'Usage') {
-      if (supply.stock < request.quantity) return false; // Insufficient stock
-      supply.stock -= request.quantity;
+    // Check warehouse stock
+    if (warehouseSupply.stock < request.quantity) return false;
+
+    // Deduct from warehouse
+    warehouseSupply.stock -= request.quantity;
+
+    // Add to worker inventory
+    if (!worker.inventory) worker.inventory = [];
+    const workerItem = worker.inventory.find(i => i.supplyId === request.supplyId);
+    
+    if (workerItem) {
+      workerItem.quantity += request.quantity;
     } else {
-      supply.stock += request.quantity;
+      worker.inventory.push({
+        supplyId: warehouseSupply.id,
+        name: warehouseSupply.name,
+        quantity: request.quantity,
+        unit: warehouseSupply.unit
+      });
     }
 
     request.status = 'Approved';
@@ -67,8 +74,21 @@ export const supplyService = {
   rejectRequest: (requestId: string) => {
     const request = mockDb.supplyRequests.find(r => r.id === requestId);
     if (!request) return;
-
     request.status = 'Rejected';
+    mockDb.save();
+  },
+
+  useSupplies: (workerId: string, usedItems: { supplyId: string, quantity: number }[]) => {
+    const worker = mockDb.users.find(u => u.id === workerId);
+    if (!worker || !worker.inventory) return;
+
+    usedItems.forEach(used => {
+      const item = worker.inventory?.find(i => i.supplyId === used.supplyId);
+      if (item) {
+        item.quantity = Math.max(0, item.quantity - used.quantity);
+      }
+    });
+
     mockDb.save();
   }
 };

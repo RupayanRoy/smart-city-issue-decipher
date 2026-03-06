@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { supplyService } from '@/backend/services/supplyService';
@@ -21,7 +22,7 @@ import {
   HardHat, MapPin, Clock, CheckCircle, Camera, LogOut, 
   ClipboardList, Navigation, Activity, ShieldCheck, 
   Wrench, Zap, AlertTriangle, Thermometer, Signal,
-  Timer, Briefcase, UserCheck, Code2, X, History, Package
+  Timer, Briefcase, UserCheck, Code2, X, History, Package, Truck
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 
@@ -34,6 +35,7 @@ const WorkerDashboard = () => {
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [shiftTime, setShiftTime] = useState(0);
   const [supplyRequests, setSupplyRequests] = useState<any[]>([]);
+  const [usedSupplies, setUsedSupplies] = useState<Record<string, number>>({});
   const [safetyChecklist, setSafetyChecklist] = useState({
     ppe: false,
     areaCordoned: false,
@@ -50,7 +52,10 @@ const WorkerDashboard = () => {
     if (!storedUser) return navigate('/login');
     const parsedUser = JSON.parse(storedUser);
     if (parsedUser.role !== 'worker') return navigate('/login');
-    setUser(parsedUser);
+    
+    // Get fresh user data from DB to have latest inventory
+    const dbUser = mockDb.users.find(u => u.id === parsedUser.id);
+    setUser(dbUser);
     refreshData(parsedUser.id);
 
     return () => {
@@ -62,6 +67,8 @@ const WorkerDashboard = () => {
     const myTasks = mockDb.issues.filter(i => i.workerId === workerId && i.status !== 'Resolved');
     setTasks(myTasks);
     setSupplyRequests(supplyService.getRequests().filter(r => r.workerId === workerId));
+    const dbUser = mockDb.users.find(u => u.id === workerId);
+    setUser(dbUser);
   };
 
   const handleClockToggle = () => {
@@ -107,16 +114,25 @@ const WorkerDashboard = () => {
       return;
     }
 
+    // Process supply usage
+    const itemsUsed = Object.entries(usedSupplies)
+      .filter(([_, qty]) => qty > 0)
+      .map(([id, qty]) => ({ supplyId: id, quantity: qty }));
+
+    supplyService.useSupplies(user.id, itemsUsed);
+
     issueService.submitWorkerReport(selectedTask.id, {
       submittedAt: new Date().toISOString(),
       notes: reportNotes,
-      imageUrl: completionImageUrl
+      imageUrl: completionImageUrl,
+      usedSupplies: itemsUsed
     });
 
     showSuccess("Report sent for verification.");
     setSelectedTask(null);
     setReportNotes('');
     setCompletionImageUrl('');
+    setUsedSupplies({});
     setSafetyChecklist({ ppe: false, areaCordoned: false, toolsInspected: false, powerIsolated: false });
     refreshData(user.id);
   };
@@ -168,19 +184,30 @@ const WorkerDashboard = () => {
 
       <main className="max-w-[1600px] mx-auto p-6 grid grid-cols-12 gap-6 flex-1 w-full">
         <div className="col-span-12 lg:col-span-3 space-y-6">
+          {/* Personal Kit / Inventory */}
           <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-2xl rounded-3xl overflow-hidden">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-500" /> Performance Metrics
+                <Package className="w-4 h-4 text-amber-500" /> My Personal Kit
               </CardTitle>
+              <SupplyRequestDialog worker={user} onSuccess={() => refreshData(user.id)} />
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-slate-500 dark:text-slate-400">Efficiency Rating</span>
-                  <span className="text-emerald-600 dark:text-emerald-500">94%</span>
-                </div>
-                <Progress value={94} className="h-1.5 bg-slate-100 dark:bg-slate-800" />
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                {user?.inventory?.map(item => (
+                  <div key={item.supplyId} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 flex justify-between items-center">
+                    <div>
+                      <p className="text-xs font-black text-slate-900 dark:text-white">{item.name}</p>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">{item.unit}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-black ${item.quantity <= 2 ? 'text-red-500' : 'text-emerald-600'}`}>
+                        {item.quantity}
+                      </p>
+                      {item.quantity <= 2 && <Badge className="bg-red-500/10 text-red-500 text-[8px] font-black px-1 py-0">LOW</Badge>}
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -188,19 +215,19 @@ const WorkerDashboard = () => {
           <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <Package className="w-4 h-4 text-amber-500" /> Supply Requests
+                <Truck className="w-4 h-4 text-amber-500" /> Refill Requests
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <div className="space-y-3">
                 {supplyRequests.length === 0 ? (
-                  <p className="text-[10px] text-slate-400 font-bold text-center py-4">No recent requests</p>
+                  <p className="text-[10px] text-slate-400 font-bold text-center py-4">No active requests</p>
                 ) : (
                   supplyRequests.slice(0, 5).map(req => (
                     <div key={req.id} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 flex justify-between items-center">
                       <div>
                         <p className="text-[10px] font-black text-slate-900 dark:text-white">{req.supplyName}</p>
-                        <p className="text-[8px] font-bold text-slate-500 uppercase">{req.quantity} {req.type}</p>
+                        <p className="text-[8px] font-bold text-slate-500 uppercase">Qty: {req.quantity}</p>
                       </div>
                       <Badge className={`text-[8px] font-black ${req.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-600' : req.status === 'Rejected' ? 'bg-red-500/20 text-red-600' : 'bg-amber-500/20 text-amber-600'}`}>
                         {req.status}
@@ -294,7 +321,6 @@ const WorkerDashboard = () => {
                       <MapPin className="w-4 h-4 text-amber-500" /> {selectedTask.location.address}
                     </CardDescription>
                   </div>
-                  <SupplyRequestDialog worker={user} issue={selectedTask} onSuccess={() => refreshData(user.id)} />
                 </div>
               </CardHeader>
               
@@ -344,10 +370,32 @@ const WorkerDashboard = () => {
                   </div>
 
                   <form onSubmit={handleSubmitReport} className="space-y-6 bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[2rem] border border-slate-200 dark:border-slate-700/50">
+                    <div className="space-y-4">
+                      <Label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Supplies Used from Kit</Label>
+                      <div className="grid grid-cols-1 gap-3">
+                        {user?.inventory?.map(item => (
+                          <div key={item.supplyId} className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <span className="text-xs font-bold">{item.name}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] text-slate-400">Available: {item.quantity}</span>
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                max={item.quantity}
+                                className="w-20 h-8 rounded-lg text-xs font-bold"
+                                value={usedSupplies[item.supplyId] || 0}
+                                onChange={e => setUsedSupplies(prev => ({ ...prev, [item.supplyId]: parseInt(e.target.value) || 0 }))}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <Textarea 
                       required 
                       placeholder="Technical Notes..." 
-                      className="min-h-[180px] rounded-2xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                      className="min-h-[120px] rounded-2xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                       value={reportNotes}
                       onChange={e => setReportNotes(e.target.value)}
                       disabled={!isClockedIn}

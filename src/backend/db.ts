@@ -57,9 +57,42 @@ if (!mockDb.users.find(u => u.role === 'admin')) {
 
 if (!mockDb.users.find(u => u.role === 'worker')) {
   mockDb.users.push(
-    { id: 'wrk-1', name: 'John Technician', email: 'john@citycare.gov', role: 'worker', password: 'password123', department: 'Public Works' },
-    { id: 'wrk-2', name: 'Sarah Electrician', email: 'sarah@citycare.gov', role: 'worker', password: 'password123', department: 'Electrical Grid' },
-    { id: 'wrk-3', name: 'Mike Firefighter', email: 'mike@citycare.gov', role: 'worker', password: 'password123', department: 'Fire & Rescue' }
+    { 
+      id: 'wrk-1', 
+      name: 'John Technician', 
+      email: 'john@citycare.gov', 
+      role: 'worker', 
+      password: 'password123', 
+      department: 'Public Works',
+      inventory: [
+        { supplyId: 'sup-5', name: 'Traffic Cone', quantity: 10, unit: 'Units' },
+        { supplyId: 'sup-6', name: 'Asphalt Patch', quantity: 50, unit: 'kg' }
+      ]
+    },
+    { 
+      id: 'wrk-2', 
+      name: 'Sarah Electrician', 
+      email: 'sarah@citycare.gov', 
+      role: 'worker', 
+      password: 'password123', 
+      department: 'Electrical Grid',
+      inventory: [
+        { supplyId: 'sup-9', name: 'Electrical Wire', quantity: 100, unit: 'meters' },
+        { supplyId: 'sup-10', name: 'Transformer', quantity: 1, unit: 'Units' }
+      ]
+    },
+    { 
+      id: 'wrk-3', 
+      name: 'Mike Firefighter', 
+      email: 'mike@citycare.gov', 
+      role: 'worker', 
+      password: 'password123', 
+      department: 'Fire & Rescue',
+      inventory: [
+        { supplyId: 'sup-1', name: 'Fire Extinguisher', quantity: 5, unit: 'Units' },
+        { supplyId: 'sup-2', name: 'Water Tanker', quantity: 1, unit: 'Vehicles' }
+      ]
+    }
   );
 }
 
