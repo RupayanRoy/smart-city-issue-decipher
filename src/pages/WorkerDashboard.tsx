@@ -11,15 +11,17 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
+import { supplyService } from '@/backend/services/supplyService';
 import { showSuccess, showError } from '@/utils/toast';
 import { ThemeToggle } from '@/components/theme-toggle';
 import SettingsDialog from '@/components/SettingsDialog';
+import SupplyRequestDialog from '@/components/worker/SupplyRequestDialog';
 import { cn } from '@/lib/utils';
 import { 
   HardHat, MapPin, Clock, CheckCircle, Camera, LogOut, 
   ClipboardList, Navigation, Activity, ShieldCheck, 
   Wrench, Zap, AlertTriangle, Thermometer, Signal,
-  Timer, Briefcase, UserCheck, Code2, X, History
+  Timer, Briefcase, UserCheck, Code2, X, History, Package
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 
@@ -31,6 +33,7 @@ const WorkerDashboard = () => {
   const [completionImageUrl, setCompletionImageUrl] = useState('');
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [shiftTime, setShiftTime] = useState(0);
+  const [supplyRequests, setSupplyRequests] = useState<any[]>([]);
   const [safetyChecklist, setSafetyChecklist] = useState({
     ppe: false,
     areaCordoned: false,
@@ -48,16 +51,17 @@ const WorkerDashboard = () => {
     const parsedUser = JSON.parse(storedUser);
     if (parsedUser.role !== 'worker') return navigate('/login');
     setUser(parsedUser);
-    refreshTasks(parsedUser.id);
+    refreshData(parsedUser.id);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
-  const refreshTasks = (workerId: string) => {
+  const refreshData = (workerId: string) => {
     const myTasks = mockDb.issues.filter(i => i.workerId === workerId && i.status !== 'Resolved');
     setTasks(myTasks);
+    setSupplyRequests(supplyService.getRequests().filter(r => r.workerId === workerId));
   };
 
   const handleClockToggle = () => {
@@ -114,7 +118,7 @@ const WorkerDashboard = () => {
     setReportNotes('');
     setCompletionImageUrl('');
     setSafetyChecklist({ ppe: false, areaCordoned: false, toolsInspected: false, powerIsolated: false });
-    refreshTasks(user.id);
+    refreshData(user.id);
   };
 
   const activeTasks = tasks.filter(t => t.status === 'In Progress' || t.status === 'Pending');
@@ -177,6 +181,33 @@ const WorkerDashboard = () => {
                   <span className="text-emerald-600 dark:text-emerald-500">94%</span>
                 </div>
                 <Progress value={94} className="h-1.5 bg-slate-100 dark:bg-slate-800" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-2xl rounded-3xl overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <Package className="w-4 h-4 text-amber-500" /> Supply Requests
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                {supplyRequests.length === 0 ? (
+                  <p className="text-[10px] text-slate-400 font-bold text-center py-4">No recent requests</p>
+                ) : (
+                  supplyRequests.slice(0, 5).map(req => (
+                    <div key={req.id} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 flex justify-between items-center">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-900 dark:text-white">{req.supplyName}</p>
+                        <p className="text-[8px] font-bold text-slate-500 uppercase">{req.quantity} {req.type}</p>
+                      </div>
+                      <Badge className={`text-[8px] font-black ${req.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-600' : req.status === 'Rejected' ? 'bg-red-500/20 text-red-600' : 'bg-amber-500/20 text-amber-600'}`}>
+                        {req.status}
+                      </Badge>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -256,10 +287,15 @@ const WorkerDashboard = () => {
           {selectedTask ? (
             <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-2xl rounded-[2.5rem] overflow-hidden h-full flex flex-col">
               <CardHeader className="bg-slate-50 dark:bg-slate-800/50 p-8 border-b border-slate-200 dark:border-slate-700/50">
-                <CardTitle className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{selectedTask.title}</CardTitle>
-                <CardDescription className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-amber-500" /> {selectedTask.location.address}
-                </CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{selectedTask.title}</CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-amber-500" /> {selectedTask.location.address}
+                    </CardDescription>
+                  </div>
+                  <SupplyRequestDialog worker={user} issue={selectedTask} onSuccess={() => refreshData(user.id)} />
+                </div>
               </CardHeader>
               
               <CardContent className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar">

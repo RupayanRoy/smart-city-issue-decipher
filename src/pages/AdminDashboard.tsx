@@ -12,8 +12,9 @@ import { Progress } from '@/components/ui/progress';
 import { mockDb } from '@/backend/db';
 import { analyticsService } from '@/backend/services/analyticsService';
 import { issueService } from '@/backend/services/issueService';
+import { supplyService } from '@/backend/services/supplyService';
 import { escalationService } from '@/backend/services/escalationService';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { ThemeToggle } from '@/components/theme-toggle';
 import SettingsDialog from '@/components/SettingsDialog';
 import { 
@@ -24,7 +25,8 @@ import {
   Shield, RefreshCw, CheckCircle, Play, Trash2, MapPin, AlertTriangle, 
   Search, Activity, BarChart3, LayoutDashboard, Clock, Heart, Flag, 
   Megaphone, HardHat, ClipboardCheck, Zap, Globe, Server, ShieldAlert,
-  TrendingUp, Users, MessageSquare, Terminal, Code2, Camera, Image as ImageIcon
+  TrendingUp, Users, MessageSquare, Terminal, Code2, Camera, Image as ImageIcon,
+  Package, Truck, Check, X as XIcon
 } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 
@@ -34,6 +36,8 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState<any>(null);
   const [issues, setIssues] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
+  const [supplies, setSupplies] = useState<any[]>([]);
+  const [supplyRequests, setSupplyRequests] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [liveLogs, setLiveLogs] = useState<string[]>([]);
@@ -49,16 +53,6 @@ const AdminDashboard = () => {
     setUser(parsedUser);
     refreshData();
 
-    // Mock Live Feed
-    const logs = [
-      "System initialized...",
-      "AI Analysis Engine: Online",
-      "Geocoding Service: Active",
-      "Worker Node 04: Clocked In",
-      "New Report: Pothole detected in Sector 7"
-    ];
-    setLiveLogs(logs);
-
     const interval = setInterval(() => {
       const newLog = `Event: ${['Status Update', 'New Comment', 'Assignment', 'Resolution'][Math.floor(Math.random() * 4)]} at ${new Date().toLocaleTimeString()}`;
       setLiveLogs(prev => [newLog, ...prev].slice(0, 8));
@@ -72,6 +66,8 @@ const AdminDashboard = () => {
     setStats(dashboardStats);
     setIssues([...mockDb.issues].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     setWorkers(mockDb.users.filter(u => u.role === 'worker'));
+    setSupplies(supplyService.getSupplies());
+    setSupplyRequests(supplyService.getRequests());
   };
 
   const handleStatusUpdate = (id: string, status: any) => {
@@ -93,6 +89,22 @@ const AdminDashboard = () => {
     const admin = JSON.parse(localStorage.getItem('current_user') || '{}');
     issueService.updateStatus(id, 'Resolved', admin.name);
     showSuccess("Work verified and issue resolved!");
+    refreshData();
+  };
+
+  const handleApproveSupply = (requestId: string) => {
+    const success = supplyService.approveRequest(requestId);
+    if (success) {
+      showSuccess("Supply request approved.");
+      refreshData();
+    } else {
+      showError("Insufficient stock to approve this request.");
+    }
+  };
+
+  const handleRejectSupply = (requestId: string) => {
+    supplyService.rejectRequest(requestId);
+    showSuccess("Supply request rejected.");
     refreshData();
   };
 
@@ -205,25 +217,6 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-2xl rounded-3xl overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-sky-500" /> Departmental Load
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {['Public Works', 'Electrical Grid', 'Waste Management'].map((dept, i) => (
-                <div key={i} className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-bold">
-                    <span className="text-slate-500 dark:text-slate-400">{dept}</span>
-                    <span className="text-slate-900 dark:text-white">{[75, 42, 91][i]}%</span>
-                  </div>
-                  <Progress value={[75, 42, 91][i]} className="h-1 bg-slate-100 dark:bg-slate-800" />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
         </div>
 
         {/* Middle Column: Tactical Management */}
@@ -232,6 +225,9 @@ const AdminDashboard = () => {
             <TabsList className="mb-6 bg-white dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm inline-flex">
               <TabsTrigger value="management" className="rounded-xl px-8 py-3 font-black text-xs data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all flex items-center gap-2">
                 <LayoutDashboard className="w-4 h-4" /> TACTICAL OVERVIEW
+              </TabsTrigger>
+              <TabsTrigger value="logistics" className="rounded-xl px-8 py-3 font-black text-xs data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all flex items-center gap-2">
+                <Truck className="w-4 h-4" /> LOGISTICS COMMAND
               </TabsTrigger>
               <TabsTrigger value="analytics" className="rounded-xl px-8 py-3 font-black text-xs data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" /> IMPACT ANALYTICS
@@ -364,6 +360,84 @@ const AdminDashboard = () => {
               </div>
             </TabsContent>
 
+            <TabsContent value="logistics" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Inventory Overview */}
+                <Card className="lg:col-span-1 bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-[2rem] overflow-hidden">
+                  <CardHeader className="p-6 border-b border-slate-100 dark:border-slate-800">
+                    <CardTitle className="text-sm font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                      <Package className="w-4 h-4 text-amber-500" /> Inventory Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[600px] overflow-y-auto custom-scrollbar">
+                      {supplies.map(supply => (
+                        <div key={supply.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                          <div>
+                            <p className="text-xs font-black text-slate-900 dark:text-white">{supply.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">{supply.category}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-black ${supply.stock <= supply.minThreshold ? 'text-red-500' : 'text-emerald-600'}`}>
+                              {supply.stock} {supply.unit}
+                            </p>
+                            {supply.stock <= supply.minThreshold && (
+                              <Badge className="bg-red-500/10 text-red-500 text-[8px] font-black uppercase px-1.5 py-0">LOW STOCK</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Supply Requests */}
+                <Card className="lg:col-span-2 bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-[2rem] overflow-hidden">
+                  <CardHeader className="p-6 border-b border-slate-100 dark:border-slate-800">
+                    <CardTitle className="text-sm font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                      <ClipboardCheck className="w-4 h-4 text-emerald-500" /> Pending Logistics Requests
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      {supplyRequests.filter(r => r.status === 'Pending').length === 0 ? (
+                        <div className="text-center py-20">
+                          <CheckCircle className="w-12 h-12 text-emerald-500/20 mx-auto mb-4" />
+                          <p className="text-slate-500 font-bold">All logistics requests processed.</p>
+                        </div>
+                      ) : (
+                        supplyRequests.filter(r => r.status === 'Pending').map(request => (
+                          <div key={request.id} className="p-6 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-slate-200 dark:border-slate-700/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Badge className={`text-[8px] font-black ${request.type === 'Usage' ? 'bg-amber-500/20 text-amber-600' : 'bg-emerald-500/20 text-emerald-600'}`}>
+                                  {request.type.toUpperCase()}
+                                </Badge>
+                                <span className="text-[10px] font-mono text-slate-400">ID: {request.id}</span>
+                              </div>
+                              <h4 className="font-black text-slate-900 dark:text-white">{request.quantity}x {request.supplyName}</h4>
+                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                Requested by <span className="text-emerald-600">{request.workerName}</span>
+                                {request.issueTitle && <> for <span className="text-amber-600">{request.issueTitle}</span></>}
+                              </p>
+                            </div>
+                            <div className="flex gap-2 w-full md:w-auto">
+                              <Button size="sm" className="flex-1 md:flex-none rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black" onClick={() => handleApproveSupply(request.id)}>
+                                <Check className="w-4 h-4 mr-1" /> APPROVE
+                              </Button>
+                              <Button size="sm" variant="outline" className="flex-1 md:flex-none rounded-xl border-slate-200 dark:border-slate-700 text-red-500 hover:bg-red-50" onClick={() => handleRejectSupply(request.id)}>
+                                <XIcon className="w-4 h-4 mr-1" /> REJECT
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
             <TabsContent value="analytics" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-3xl p-6">
@@ -489,16 +563,6 @@ const AdminDashboard = () => {
               ))}
             </CardContent>
           </Card>
-
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-6 space-y-3">
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
-              <Shield className="w-5 h-5" />
-              <span className="font-black text-sm uppercase tracking-tighter">Security Status</span>
-            </div>
-            <p className="text-[10px] text-emerald-800/70 dark:text-emerald-200/70 font-medium leading-relaxed">
-              All systems operational. End-to-end encryption active. Citizen data anonymized for analytics.
-            </p>
-          </div>
         </div>
       </main>
 

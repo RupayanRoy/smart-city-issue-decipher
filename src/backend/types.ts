@@ -6,7 +6,7 @@ export interface Notification {
   issueId: string;
   title: string;
   message: string;
-  type: 'resolution' | 'system';
+  type: 'resolution' | 'system' | 'supply';
   isRead: boolean;
   createdAt: string;
 }
@@ -25,6 +25,29 @@ export interface User {
 export type IssueCategory = 'Road' | 'Water' | 'Electricity' | 'Garbage' | 'Fire' | 'Medical' | 'Public Safety' | 'Other';
 export type IssueStatus = 'Pending' | 'In Progress' | 'Completed' | 'Resolved' | 'Flagged';
 export type IssuePriority = 'Low' | 'Medium' | 'High';
+
+export interface Supply {
+  id: string;
+  name: string;
+  category: IssueCategory;
+  stock: number;
+  unit: string;
+  minThreshold: number;
+}
+
+export interface SupplyRequest {
+  id: string;
+  workerId: string;
+  workerName: string;
+  issueId?: string;
+  issueTitle?: string;
+  supplyId: string;
+  supplyName: string;
+  quantity: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  type: 'Usage' | 'Refill';
+  createdAt: string;
+}
 
 export const DEPARTMENTS = [
   'Public Works',

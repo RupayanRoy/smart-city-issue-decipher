@@ -1,13 +1,17 @@
-import { User, Issue } from './types';
+import { User, Issue, Supply, SupplyRequest } from './types';
 
 export const mockDb = {
   users: [] as User[],
   issues: [] as Issue[],
+  supplies: [] as Supply[],
+  supplyRequests: [] as SupplyRequest[],
   
   save: () => {
     localStorage.setItem('smart_city_db', JSON.stringify({
       users: mockDb.users,
-      issues: mockDb.issues
+      issues: mockDb.issues,
+      supplies: mockDb.supplies,
+      supplyRequests: mockDb.supplyRequests
     }));
   },
   
@@ -17,11 +21,29 @@ export const mockDb = {
       const parsed = JSON.parse(data);
       mockDb.users = parsed.users || [];
       mockDb.issues = parsed.issues || [];
+      mockDb.supplies = parsed.supplies || [];
+      mockDb.supplyRequests = parsed.supplyRequests || [];
     }
   }
 };
 
 mockDb.load();
+
+// Seed Supplies if empty
+if (mockDb.supplies.length === 0) {
+  mockDb.supplies = [
+    { id: 'sup-1', name: 'Fire Extinguisher', category: 'Fire', stock: 50, unit: 'Units', minThreshold: 10 },
+    { id: 'sup-2', name: 'Water Tanker', category: 'Fire', stock: 5, unit: 'Vehicles', minThreshold: 2 },
+    { id: 'sup-3', name: 'Ambulance', category: 'Medical', stock: 8, unit: 'Vehicles', minThreshold: 3 },
+    { id: 'sup-4', name: 'First Aid Kit', category: 'Medical', stock: 100, unit: 'Kits', minThreshold: 20 },
+    { id: 'sup-5', name: 'Traffic Cone', category: 'Road', stock: 200, unit: 'Units', minThreshold: 50 },
+    { id: 'sup-6', name: 'Asphalt Patch', category: 'Road', stock: 500, unit: 'kg', minThreshold: 100 },
+    { id: 'sup-7', name: 'Safety Gloves', category: 'Garbage', stock: 150, unit: 'Pairs', minThreshold: 30 },
+    { id: 'sup-8', name: 'Trash Bin', category: 'Garbage', stock: 40, unit: 'Units', minThreshold: 10 },
+    { id: 'sup-9', name: 'Electrical Wire', category: 'Electricity', stock: 1000, unit: 'meters', minThreshold: 200 },
+    { id: 'sup-10', name: 'Transformer', category: 'Electricity', stock: 3, unit: 'Units', minThreshold: 1 }
+  ];
+}
 
 if (!mockDb.users.find(u => u.role === 'admin')) {
   mockDb.users.push({
@@ -33,7 +55,6 @@ if (!mockDb.users.find(u => u.role === 'admin')) {
   });
 }
 
-// Add Mock Workers
 if (!mockDb.users.find(u => u.role === 'worker')) {
   mockDb.users.push(
     { id: 'wrk-1', name: 'John Technician', email: 'john@citycare.gov', role: 'worker', password: 'password123', department: 'Public Works' },
