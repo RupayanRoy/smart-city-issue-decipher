@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger 
 } from '@/components/ui/dialog';
@@ -9,12 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 import { 
   User, Bell, Shield, Settings as SettingsIcon, Save, 
-  Zap, Trophy, Cpu, HardHat, Activity, History, ShieldCheck 
+  Zap, Trophy, Cpu, HardHat, Activity, History, ShieldCheck,
+  BarChart3, Server, Database, Globe
 } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 import { mockDb } from '@/backend/db';
+import { analyticsService } from '@/backend/services/analyticsService';
 import { Badge } from '@/components/ui/badge';
 
 interface SettingsDialogProps {
@@ -23,6 +26,7 @@ interface SettingsDialogProps {
 }
 
 const SettingsDialog: React.FC<SettingsDialogProps> = ({ user, trigger }) => {
+  const [stats, setStats] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -32,6 +36,12 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ user, trigger }) => {
     escalationThreshold: 3,
     publicProfile: true
   });
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      setStats(analyticsService.getDashboardStats());
+    }
+  }, [user]);
 
   const handleSave = () => {
     const dbUser = mockDb.users.find(u => u.id === user.id);
@@ -54,7 +64,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ user, trigger }) => {
         )}
       </DialogTrigger>
       <DialogContent className="max-w-3xl rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden bg-white dark:bg-slate-900">
-        <div className="flex h-[600px]">
+        <div className="flex h-[650px]">
           {/* Sidebar */}
           <div className="w-56 bg-slate-50 dark:bg-slate-950 p-6 border-r border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2 mb-8">
@@ -182,33 +192,67 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ user, trigger }) => {
               </TabsContent>
 
               {/* Admin Advanced: System */}
-              <TabsContent value="system" className="mt-0 space-y-6">
+              <TabsContent value="system" className="mt-0 space-y-8">
                 <div className="space-y-1">
-                  <h3 className="text-lg font-black dark:text-white">System Control</h3>
-                  <p className="text-xs text-slate-500">Configure global city operations and AI thresholds.</p>
+                  <h3 className="text-lg font-black dark:text-white">System Control & Analytics</h3>
+                  <p className="text-xs text-slate-500">Configure global operations and monitor live system performance.</p>
                 </div>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Escalation Threshold (Days)</Label>
-                    <Input type="number" value={formData.escalationThreshold} onChange={e => setFormData({...formData, escalationThreshold: parseInt(e.target.value)})} className="rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950" />
-                    <p className="text-[10px] text-slate-500 italic">Issues older than this will be automatically marked as High Priority.</p>
+
+                {/* Live System Stats */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Total Reports</p>
+                    <p className="text-xl font-black text-white">{stats?.totalIssues || 0}</p>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm font-bold dark:text-white">Maintenance Mode</Label>
-                      <p className="text-[10px] text-slate-500">Disable new report submissions temporarily.</p>
-                    </div>
-                    <Switch checked={false} />
+                  <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                    <p className="text-[10px] font-black text-sky-500 uppercase tracking-widest mb-1">AI Sessions</p>
+                    <p className="text-xl font-black text-white">14 Active</p>
                   </div>
-                  <div className="bg-slate-900 p-6 rounded-3xl space-y-3">
-                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">System Health</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-400">Database Sync</span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">Optimal</Badge>
+                  <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Uptime</p>
+                    <p className="text-xl font-black text-white">99.9%</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                      <Activity className="w-3 h-3" /> System Performance
+                    </Label>
+                    <div className="space-y-4 bg-slate-50 dark:bg-slate-800/30 p-6 rounded-3xl border border-slate-100 dark:border-slate-700/50">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[10px] font-bold">
+                          <span className="text-slate-500 flex items-center gap-1"><Server className="w-3 h-3" /> Server Load</span>
+                          <span className="text-slate-900 dark:text-white">24%</span>
+                        </div>
+                        <Progress value={24} className="h-1 bg-slate-200 dark:bg-slate-700" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[10px] font-bold">
+                          <span className="text-slate-500 flex items-center gap-1"><Database className="w-3 h-3" /> DB Latency</span>
+                          <span className="text-emerald-500">12ms</span>
+                        </div>
+                        <Progress value={12} className="h-1 bg-slate-200 dark:border-slate-700" />
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-400">AI Engine</span>
-                      <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">Active</Badge>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                      <SettingsIcon className="w-3 h-3" /> Operational Config
+                    </Label>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Escalation Threshold (Days)</Label>
+                        <Input type="number" value={formData.escalationThreshold} onChange={e => setFormData({...formData, escalationThreshold: parseInt(e.target.value)})} className="rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950" />
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold dark:text-white">Maintenance Mode</Label>
+                          <p className="text-[10px] text-slate-500">Disable new report submissions temporarily.</p>
+                        </div>
+                        <Switch checked={false} />
+                      </div>
                     </div>
                   </div>
                 </div>
