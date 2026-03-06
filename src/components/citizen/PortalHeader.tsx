@@ -5,6 +5,7 @@ import { Heart, Bell, LogOut, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { notificationService } from '@/backend/services/notificationService';
 import { ThemeToggle } from '@/components/theme-toggle';
+import SettingsDialog from '@/components/SettingsDialog';
 
 interface PortalHeaderProps {
   user: any;
@@ -38,6 +39,7 @@ const PortalHeader: React.FC<PortalHeaderProps> = ({ user, onLogout }) => {
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
+            <SettingsDialog user={user} />
             <div className="relative">
               <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
                 <Bell className="w-5 h-5 text-slate-500 dark:text-slate-400" />

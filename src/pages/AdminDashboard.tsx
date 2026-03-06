@@ -15,6 +15,7 @@ import { issueService } from '@/backend/services/issueService';
 import { escalationService } from '@/backend/services/escalationService';
 import { showSuccess } from '@/utils/toast';
 import { ThemeToggle } from '@/components/theme-toggle';
+import SettingsDialog from '@/components/SettingsDialog';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, AreaChart, Area, Legend 
@@ -36,15 +37,16 @@ const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [liveLogs, setLiveLogs] = useState<string[]>([]);
+  const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const userStr = localStorage.getItem('current_user');
     if (!userStr) return navigate('/login');
     
-    const user = JSON.parse(userStr);
-    if (user.role !== 'admin') return navigate('/login');
-    
+    const parsedUser = JSON.parse(userStr);
+    if (parsedUser.role !== 'admin') return navigate('/login');
+    setUser(parsedUser);
     refreshData();
 
     // Mock Live Feed
@@ -152,6 +154,7 @@ const AdminDashboard = () => {
 
             <div className="flex items-center gap-4">
               <ThemeToggle />
+              <SettingsDialog user={user} />
               <Button onClick={runEscalation} variant="outline" size="sm" className="rounded-xl border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-black text-xs">
                 <RefreshCw className="mr-2 w-4 h-4" /> ESCALATION PROTOCOL
               </Button>

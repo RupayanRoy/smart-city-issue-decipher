@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,6 +13,7 @@ import { mockDb } from '@/backend/db';
 import { issueService } from '@/backend/services/issueService';
 import { showSuccess, showError } from '@/utils/toast';
 import { ThemeToggle } from '@/components/theme-toggle';
+import SettingsDialog from '@/components/SettingsDialog';
 import { cn } from '@/lib/utils';
 import { 
   HardHat, MapPin, Clock, CheckCircle, Camera, LogOut, 
@@ -146,6 +149,7 @@ const WorkerDashboard = () => {
             
             <div className="flex items-center gap-4">
               <ThemeToggle />
+              <SettingsDialog user={user} />
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold text-slate-900 dark:text-white">{user?.name}</p>
                 <p className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase">{user?.department}</p>
