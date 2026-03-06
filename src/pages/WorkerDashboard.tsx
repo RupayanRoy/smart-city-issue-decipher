@@ -119,8 +119,10 @@ const WorkerDashboard = () => {
       .filter(([_, qty]) => qty > 0)
       .map(([id, qty]) => ({ supplyId: id, quantity: qty }));
 
+    // Deduct from worker inventory
     supplyService.useSupplies(user.id, itemsUsed);
 
+    // Submit the report with usage data
     issueService.submitWorkerReport(selectedTask.id, {
       submittedAt: new Date().toISOString(),
       notes: reportNotes,
