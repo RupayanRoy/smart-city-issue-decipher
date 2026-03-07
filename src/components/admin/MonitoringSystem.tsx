@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { mockDb } from '@/backend/db';
 import UrbanInfrastructureMap from './UrbanInfrastructureMap';
+import PredictiveAnalysisDialog from './PredictiveAnalysisDialog';
 
 interface MonitoringSystemProps {
   stats: any;
@@ -53,6 +54,30 @@ const MonitoringSystem: React.FC<MonitoringSystemProps> = ({ stats }) => {
 
   const activeWorkers = mockDb.users.filter(u => u.role === 'worker');
   const activeCitizens = mockDb.users.filter(u => u.role === 'citizen');
+
+  const predictiveInsights = [
+    { 
+      title: 'Road Subsidence Risk', 
+      desc: 'High probability of sinkhole formation in Sector 3 due to water main vibration.', 
+      prob: '84%', 
+      color: 'text-rose-400',
+      icon: AlertTriangle 
+    },
+    { 
+      title: 'Grid Overload Forecast', 
+      desc: 'Predicted 15% surge in power demand for Kelambakkam between 18:00-20:00.', 
+      prob: '92%', 
+      color: 'text-amber-400',
+      icon: Zap 
+    },
+    { 
+      title: 'Maintenance Required', 
+      desc: 'Street light cluster #42 showing signs of imminent ballast failure.', 
+      prob: '65%', 
+      color: 'text-emerald-400',
+      icon: Lightbulb 
+    }
+  ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -188,42 +213,22 @@ const MonitoringSystem: React.FC<MonitoringSystemProps> = ({ stats }) => {
             <p className="text-xs text-slate-400 font-medium mt-1">Machine learning forecasts for infrastructure maintenance.</p>
           </CardHeader>
           <CardContent className="p-8 space-y-6">
-            {[
-              { 
-                title: 'Road Subsidence Risk', 
-                desc: 'High probability of sinkhole formation in Sector 3 due to water main vibration.', 
-                prob: '84%', 
-                color: 'text-rose-400',
-                icon: AlertTriangle 
-              },
-              { 
-                title: 'Grid Overload Forecast', 
-                desc: 'Predicted 15% surge in power demand for Kelambakkam between 18:00-20:00.', 
-                prob: '92%', 
-                color: 'text-amber-400',
-                icon: Zap 
-              },
-              { 
-                title: 'Maintenance Required', 
-                desc: 'Street light cluster #42 showing signs of imminent ballast failure.', 
-                prob: '65%', 
-                color: 'text-emerald-400',
-                icon: Lightbulb 
-              }
-            ].map((insight, idx) => (
-              <div key={idx} className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2 group hover:bg-white/10 transition-colors cursor-pointer">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2">
-                    <insight.icon className={`w-4 h-4 ${insight.color}`} />
-                    <h4 className="text-sm font-black">{insight.title}</h4>
+            {predictiveInsights.map((insight, idx) => (
+              <PredictiveAnalysisDialog key={idx} insight={insight}>
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2 group hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-2">
+                      <insight.icon className={`w-4 h-4 ${insight.color}`} />
+                      <h4 className="text-sm font-black">{insight.title}</h4>
+                    </div>
+                    <Badge className="bg-white/10 text-white text-[10px] font-black">{insight.prob}</Badge>
                   </div>
-                  <Badge className="bg-white/10 text-white text-[10px] font-black">{insight.prob}</Badge>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">{insight.desc}</p>
+                  <div className="flex items-center gap-1 text-[10px] font-black text-emerald-400 uppercase tracking-widest pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    View Analysis <ArrowUpRight className="w-3 h-3" />
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">{insight.desc}</p>
-                <div className="flex items-center gap-1 text-[10px] font-black text-emerald-400 uppercase tracking-widest pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  View Analysis <ArrowUpRight className="w-3 h-3" />
-                </div>
-              </div>
+              </PredictiveAnalysisDialog>
             ))}
           </CardContent>
         </Card>
