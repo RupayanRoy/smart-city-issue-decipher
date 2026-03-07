@@ -17,6 +17,7 @@ import { escalationService } from '@/backend/services/escalationService';
 import { showSuccess, showError } from '@/utils/toast';
 import { ThemeToggle } from '@/components/theme-toggle';
 import SettingsDialog from '@/components/SettingsDialog';
+import MonitoringSystem from '@/components/admin/MonitoringSystem';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, AreaChart, Area, Legend 
@@ -26,7 +27,7 @@ import {
   Search, Activity, BarChart3, LayoutDashboard, Clock, Heart, Flag, 
   Megaphone, HardHat, ClipboardCheck, Zap, Globe, Server, ShieldAlert,
   TrendingUp, Users, MessageSquare, Terminal, Code2, Camera, Image as ImageIcon,
-  Package, Truck, Check, X as XIcon
+  Package, Truck, Check, X as XIcon, Monitor
 } from 'lucide-react';
 import IssueMapOverview from '@/components/IssueMapOverview';
 
@@ -226,6 +227,9 @@ const AdminDashboard = () => {
               <TabsTrigger value="management" className="rounded-xl px-8 py-3 font-black text-xs data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all flex items-center gap-2">
                 <LayoutDashboard className="w-4 h-4" /> TACTICAL OVERVIEW
               </TabsTrigger>
+              <TabsTrigger value="monitoring" className="rounded-xl px-8 py-3 font-black text-xs data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all flex items-center gap-2">
+                <Monitor className="w-4 h-4" /> MONITORING SYSTEM
+              </TabsTrigger>
               <TabsTrigger value="logistics" className="rounded-xl px-8 py-3 font-black text-xs data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all flex items-center gap-2">
                 <Truck className="w-4 h-4" /> LOGISTICS COMMAND
               </TabsTrigger>
@@ -371,6 +375,10 @@ const AdminDashboard = () => {
                   </Card>
                 ))}
               </div>
+            </TabsContent>
+
+            <TabsContent value="monitoring">
+              <MonitoringSystem stats={stats} />
             </TabsContent>
 
             <TabsContent value="logistics" className="space-y-6">
